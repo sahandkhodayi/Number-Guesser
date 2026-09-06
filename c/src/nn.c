@@ -93,6 +93,37 @@ void tensor_info(const Tensor *t , const char *label){ //label (str)
 
 void relu_tensor(Tensor *t){ // activation function for tensor 
 
-    relu(t->data, t->channels * t->width * t->height)
+    relu(t->data, t->channels * t->width * t->height);
 
 }       // data                position of that data in structore
+
+
+Tensor conv2d(const Tensor *input, const float *weights, const float *bias,
+              int out_channels, int k, int stride, int pad) {
+    int out_h = (input->height + 2 * pad - k) / stride + 1;
+    int out_w = (input->width  + 2 * pad - k) / stride + 1;
+    Tensor out = tensor_alloc(out_channels, out_h, out_w);
+
+    for (int oc = 0; oc < out_channels; oc++) {
+        for (int oy = 0; oy < out_h; oy++) {
+            for (int ox = 0; ox < out_w; ox++) {
+                float sum = bias[oc];
+                for (int ic = 0; ic < input->channels; ic++) {
+                    for (int ky = 0; ky < k; ky++) {
+                        for (int kx = 0; kx < k; kx++) {
+                            int iy = oy * stride - pad + ky; // wtf my eyes nigga
+                            int ix = ox * stride - pad + kx;
+                            if (iy < 0 || iy >= input->height) continue;
+                            if (ix < 0 || ix >= input->width)  continue;
+                            float in_val = tensor_get(input, ic, iy, ix);
+                            int w_idx = ((oc * input->channels + ic) * k + ky) * k + kx;
+                            sum += in_val * weights[w_idx];
+                        }
+                    }
+                }
+                tensor_set(&out, oc, oy, ox, sum);
+            }
+        }
+    }
+    return out;
+}
