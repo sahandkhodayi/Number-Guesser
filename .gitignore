@@ -22,3 +22,6 @@ data/*
 Thumbs.db
 .vscode/
 .idea/
+# Readme
+c/README.md 
+c/readme2.md
