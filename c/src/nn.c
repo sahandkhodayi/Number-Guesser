@@ -173,3 +173,38 @@ Tensor maxpool2d(const Tensor *input, int k, int stride) {
 
 
 // Final step our forward pass 
+
+
+// input is a Tensor (1x28x28) ---> 10 logits (classes)
+
+
+void model_forward(const CnnModel *m, const Tensor *input, float *logits_out) {
+    Tensor a = conv2d(input, m->conv1_w, m->conv1_b, 32, 3, 1, 1);
+    relu_tensor(&a);
+    
+    
+    Tensor b = conv2d(&a, m->conv2_w, m->conv2_b, 32, 3, 1, 1);
+    tensor_free(&a);
+    relu_tensor(&b);
+    
+    
+    Tensor p1 = maxpool2d(&b, 2, 2);
+    tensor_free(&b);
+
+    Tensor c = conv2d(&p1, m->conv3_w, m->conv3_b, 32, 3, 1, 1);
+    tensor_free(&p1);
+    relu_tensor(&c);
+    
+    
+    Tensor d = conv2d(&c, m->conv4_w, m->conv4_b, 32, 3, 1, 1);
+    tensor_free(&c);
+    relu_tensor(&d);
+    
+    
+    Tensor p2 = maxpool2d(&d, 2, 2);
+    tensor_free(&d);
+
+    int in_features = p2.channels * p2.height * p2.width; // 1568
+    linear(m->fc_w, m->fc_b, p2.data, logits_out, in_features, 10);
+    tensor_free(&p2);
+}
