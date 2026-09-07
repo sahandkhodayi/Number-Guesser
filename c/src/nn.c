@@ -32,6 +32,11 @@ int argmax(const float *x, int n) {
 }
 
 
+
+
+
+//
+
 Tensor tensor_alloc(int channels, int height, int width) {
     Tensor t;
     t.channels = channels;
