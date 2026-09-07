@@ -31,8 +31,10 @@ void tensor_set(Tensor *t,int c,int y, int x,float value ); // why not const??
 
 void tensor_info(const Tensor *t,const char *label);
 
-void relu_tensor(Tensor *t) // why pointer to tensor?
+void relu_tensor(Tensor *t); // why pointer to tensor?
 
+Tensor conv2d(const Tensor *input, const float *weights, const float *bias,
+              int out_channels, int k, int stride, int pad); // our converter with filter !!
 
 #endif
 

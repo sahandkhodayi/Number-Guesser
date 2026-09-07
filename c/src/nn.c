@@ -111,7 +111,7 @@ Tensor conv2d(const Tensor *input, const float *weights, const float *bias,
                 for (int ic = 0; ic < input->channels; ic++) {
                     for (int ky = 0; ky < k; ky++) {
                         for (int kx = 0; kx < k; kx++) {
-                            int iy = oy * stride - pad + ky; // wtf my eyes nigga
+                            int iy = oy * stride - pad + ky; // wtf my eyes nigga holy shit 
                             int ix = ox * stride - pad + kx;
                             if (iy < 0 || iy >= input->height) continue;
                             if (ix < 0 || ix >= input->width)  continue;
@@ -127,3 +127,49 @@ Tensor conv2d(const Tensor *input, const float *weights, const float *bias,
     }
     return out;
 }
+
+
+
+
+
+
+Tensor maxpool2d(const Tensor *input, int k, int stride) {
+    int out_h = (input->height - k) / stride + 1;
+    int out_w = (input->width  - k) / stride + 1;        // our output block or Tensors info
+    Tensor out = tensor_alloc(input->channels, out_h, out_w);
+
+    
+    
+    for (int c = 0; c < input->channels; c++) { // loop for every rgb or conv2d dims
+        
+        for (int oy = 0; oy < out_h; oy++) { // every row 
+            
+            
+            for (int ox = 0; ox < out_w; ox++) { // ever column
+                
+                
+                float best = -1e30f; // sentinel
+                
+                
+                
+                for (int ky = 0; ky < k; ky++) {
+                    for (int kx = 0; kx < k; kx++) {  /*        our main winodws 
+                                                                                        */
+                        int iy = oy * stride + ky;
+                        int ix = ox * stride + kx; // cordiante calculation
+                        float v = tensor_get(input, c, iy, ix); // getting the value
+                        if (v > best) best = v; // if it is bigger than our temp then it is the max in that window 
+
+                    }
+                }
+                tensor_set(&out, c, oy, ox, best); // we set that cordinate compare to our output tensor
+            }
+        }
+    }
+    return out;
+}
+
+
+
+
+// Final step our forward pass 
