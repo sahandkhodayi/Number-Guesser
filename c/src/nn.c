@@ -180,7 +180,8 @@ Tensor maxpool2d(const Tensor *input, int k, int stride) {
 // Final step our forward pass 
 
 
-// input is a Tensor (1x28x28) ---> 10 logits (classes)
+/* input is a Tensor (1x28x28) ---> 10 logits (classes) 
+ kernel_dakhely=3, stride=1, padding_boxTensor=1: out_size = (input + 2 - 3)/1 + 1 = input  */
 
 
 void model_forward(const CnnModel *m, const Tensor *input, float *logits_out) {
@@ -212,4 +213,56 @@ void model_forward(const CnnModel *m, const Tensor *input, float *logits_out) {
     int in_features = p2.channels * p2.height * p2.width; // 1568
     linear(m->fc_w, m->fc_b, p2.data, logits_out, in_features, 10);
     tensor_free(&p2);
+}
+
+
+
+
+ 
+
+static int read_floats(FILE *f, float *dst, size_t count, const char *what) {
+    size_t n = fread(dst, sizeof(float), count, f);
+    if (n != count) {
+        fprintf(stderr, "model_load: short read on %s (got %zu of %zu floats)\n",
+                what, n, count);
+        return -1;
+    }
+    return 0; // not even nec?? 
+}
+
+
+
+
+
+int model_load(CnnModel *m, const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (f == NULL) {
+        fprintf(stderr, "model_load: could not open '%s'\n", path);
+        return -1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (size != WEIGHTS_FILE_BYTES) {
+        fprintf(stderr, "model_load: '%s' is %ld bytes, expected %d\n",
+                path, size, WEIGHTS_FILE_BYTES);
+        fclose(f);
+        return -1;
+    }
+
+    int err = 0;
+    err |= read_floats(f, m->conv1_w, 288,   "conv1_w");
+    err |= read_floats(f, m->conv1_b, 32,    "conv1_b");
+    err |= read_floats(f, m->conv2_w, 9216,  "conv2_w");
+    err |= read_floats(f, m->conv2_b, 32,    "conv2_b");
+    err |= read_floats(f, m->conv3_w, 9216,  "conv3_w");
+    err |= read_floats(f, m->conv3_b, 32,    "conv3_b");
+    err |= read_floats(f, m->conv4_w, 9216,  "conv4_w");
+    err |= read_floats(f, m->conv4_b, 32,    "conv4_b");
+    err |= read_floats(f, m->fc_w,    15680, "fc_w");
+    err |= read_floats(f, m->fc_b,    10,    "fc_b");
+
+    fclose(f);
+    return err ? -1 : 0;
 }
