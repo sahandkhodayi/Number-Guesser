@@ -1,71 +1,59 @@
-"""Export trained PyTorch weights for the C inference implementation."""
+"""Export trained PyTorch weights to a flat binary file for C inference."""
 
-# Step 0 placeholder.
-# Weight export will be implemented after the PyTorch model is trained.
-import torch 
-import numpy as np
+import torch
 from pathlib import Path
-
 from model import _MainModel
 
-_modelPath=Path("models/number_guesser_model.pth")
+MODEL_PATH = Path("models/number_guesser_model.pth")
+OUTPUT_PATH = Path("models/weights.bin")
+EXPECTED_BYTES = 175016
 
-_output=Path("models/weights.bin")
-
-BYTE_VALUE= 175016
-
-
-def dump(label , tensor):
-    flat = tensor.detach().flatten().numpy()
-    print(f"{label:8s} shape={tuple(tensor.shape)}  first 5={np.round(flat[:5], 4).tolist()}")
-
-
+# Order MUST match c/src/nn.c's model_load() exactly!
+LAYER_KEYS = [
+    "block_1.0.weight", "block_1.0.bias",   # conv1: 1 -> 32
+    "block_1.2.weight", "block_1.2.bias",   # conv2: 32 -> 32
+    "block_2.0.weight", "block_2.0.bias",   # conv3: 32 -> 32
+    "block_2.2.weight", "block_2.2.bias",   # conv4: 32 -> 32
+    "classifier.1.weight", "classifier.1.bias",  # linear: 1568 -> 10
+]
 
 def main():
+    print("[1] Checking for trained model...")
+    if not MODEL_PATH.exists():
+        raise SystemExit(f"❌ {MODEL_PATH} not found — train and save a model first.")
     
-    model=_MainModel(input_shape=1 , hidden_units= 32 , output_shape= 10) # for now we use classes as output then we'll use tokens
-    model.load_state_dict(torch.load(_modelPath,map_location="cpu"))
-
+    print("[2] Loading model...")
+    model = _MainModel(input_shape=1, hidden_units=32, output_shape=10)
+    state_dict = torch.load(MODEL_PATH, map_location="cpu")
+    model.load_state_dict(state_dict)
     model.eval()
 
+    print("[3] Checking for missing keys...")
+    missing = [k for k in LAYER_KEYS if k not in state_dict]
+    if missing:
+        raise SystemExit(
+            f"❌ state_dict is missing expected keys: {missing}\n"
+            f"   Actual keys: {list(state_dict.keys())}\n"
+            f"   Update LAYER_KEYS to match your model.py architecture."
+        )
+    print("   ✅ All keys found!")
 
+    print("[4] Writing weights.bin...")
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(OUTPUT_PATH, "wb") as f:
+        for key in LAYER_KEYS:
+            tensor = state_dict[key]
+            # Ensure contiguous (just in case) and write raw bytes
+            f.write(tensor.contiguous().numpy().tobytes())
 
-
-    if _output.exists():
-        raw = np.fromfile(_output, dtype=np.float32)
-        x = torch.from_numpy(raw).reshape(1, 1, 28, 28)
+    actual_bytes = OUTPUT_PATH.stat().st_size
+    if actual_bytes == EXPECTED_BYTES:
+        print(f"✅ Wrote {OUTPUT_PATH} ({actual_bytes} bytes, expected {EXPECTED_BYTES}) [OK]")
     else:
-        print(f"[warn] {_output} not found, using a zero image instead")
-        x = torch.zeros(1, 1, 28, 28)
+        print(f"⚠️  Wrote {OUTPUT_PATH} ({actual_bytes} bytes, expected {EXPECTED_BYTES}) [MISMATCH]")
+        print("   Check that the architecture hasn't changed!")
 
-    with torch.no_grad():
-        dump("input", x)
-        a = model.block_1[0](x)
-        dump("conv1", a)
-        a = model.block_1[1](a)
-        dump("relu1", a)
-        a = model.block_1[2](a)
-        dump("conv2", a)
-        a = model.block_1[3](a)
-        dump("relu2", a)
-        a = model.block_1[4](a) 
-        dump("pool1", a)
-        a = model.block_2[0](a)
-        dump("conv3", a)
-        a = model.block_2[1](a) 
-        dump("relu3", a)
-        a = model.block_2[2](a) 
-        dump("conv4", a)
-        a = model.block_2[3](a)
-        dump("relu4", a)
-        a = model.block_2[4](a)
-        dump("pool2", a)
-        flat = model.classifier[0](a)
-        dump("flat", flat)
-        logits = model.classifier[1](flat)
-        dump("logits", logits)
-        print(f"\npredicted digit: {logits.argmax(dim=1).item()}")
+    print("[5] Done! You can now run C inference with `./verify`.")
 
-
-if __name__=="__main__":
-    main() 
+if __name__ == "__main__":
+    main()

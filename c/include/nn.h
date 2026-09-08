@@ -58,5 +58,13 @@ Tensor conv2d(const Tensor *input, const float *weights, const float *bias,
 
 Tensor maxpool2d(const Tensor *input, int k, int stride); // 9x9 --> 3x3
 
+
+void model_forward(const CnnModel *m, const Tensor *input, float *logits_out);
+void tensor_free(Tensor *t);
+
+static int read_floats(FILE *f, float *dst, size_t count, const char *what);
+
+int model_load(CnnModel *m, const char *path);
+
 #endif
 

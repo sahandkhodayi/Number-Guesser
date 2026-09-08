@@ -61,16 +61,16 @@ void tensor_free(Tensor *t) {
 
 float tensor_get(const Tensor *t , int c, int y , int x){
 
-    return t->data[(c* t->height + y ) * (t->width + x)]; // wtf?
+    return t->data[(c* t->height + y ) * t->width + x]; // wtf?
 
 
 
 } 
 
 
-void tesnor_set(Tensor *t, int c, int y , int x , float value){
+void tensor_set(Tensor *t, int c, int y , int x , float value){
 
-    t->data[(c* t->height + y ) * (t->width + x)] = value; // setting a value at xy postion with a value!
+    t->data[(c* t->height + y ) * t->width + x] = value; // setting a value at xy postion with a value!
 
 
 }
