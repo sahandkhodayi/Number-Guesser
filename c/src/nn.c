@@ -223,9 +223,10 @@ void model_forward(const CnnModel *m, const Tensor *input, float *logits_out) {
 static int read_floats(FILE *f, float *dst, size_t count, const char *what) {
     size_t n = fread(dst, sizeof(float), count, f);
     if (n != count) {
-        fprintf(stderr, "model_load: short read on %s (got %zu of %zu floats)\n",
+        fprintf(stderr, "model_load: short read on %s (got %zu of %zu floats)\n", // checking if it is equal in bitwise
                 what, n, count);
         return -1;
+    
     }
     return 0; // not even nec?? 
 }
@@ -237,25 +238,31 @@ static int read_floats(FILE *f, float *dst, size_t count, const char *what) {
 int model_load(CnnModel *m, const char *path) {
     FILE *f = fopen(path, "rb");
     if (f == NULL) {
-        fprintf(stderr, "model_load: could not open '%s'\n", path);
+        fprintf(stderr, "model_load: could not open '%s'\n", path); // checking for the model .pth
         return -1;
     }
 
+    
+    
     fseek(f, 0, SEEK_END);
-    long size = ftell(f);
+    long size = ftell(f); // looking for the size of our model .pth
     fseek(f, 0, SEEK_SET);
+    
+    
+    
     if (size != WEIGHTS_FILE_BYTES) {
-        fprintf(stderr, "model_load: '%s' is %ld bytes, expected %d\n",
+        fprintf(stderr, "model_load: '%s' is %ld bytes, expected %d\n",  // checking if size is not matching (bitwise)
                 path, size, WEIGHTS_FILE_BYTES);
         fclose(f);
         return -1;
     }
 
+    
     int err = 0;
     err |= read_floats(f, m->conv1_w, 288,   "conv1_w");
     err |= read_floats(f, m->conv1_b, 32,    "conv1_b");
     err |= read_floats(f, m->conv2_w, 9216,  "conv2_w");
-    err |= read_floats(f, m->conv2_b, 32,    "conv2_b");
+    err |= read_floats(f, m->conv2_b, 32,    "conv2_b");  //reading the floats and checking for non matching bits
     err |= read_floats(f, m->conv3_w, 9216,  "conv3_w");
     err |= read_floats(f, m->conv3_b, 32,    "conv3_b");
     err |= read_floats(f, m->conv4_w, 9216,  "conv4_w");
@@ -263,6 +270,8 @@ int model_load(CnnModel *m, const char *path) {
     err |= read_floats(f, m->fc_w,    15680, "fc_w");
     err |= read_floats(f, m->fc_b,    10,    "fc_b");
 
+    
+    
     fclose(f);
     return err ? -1 : 0;
 }
