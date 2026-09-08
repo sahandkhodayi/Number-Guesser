@@ -17,12 +17,15 @@ models/*.onnx
 data/*
 !data/.gitkeep
 
+# C build artifacts
+build/
+*.o
+*.obj
+*.exe
+*.out
+
 # OS / editor
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
-# Readme
-c/README.md 
-c/readme2.md
-c/Deep.md
