@@ -1,43 +1,28 @@
-"""Dataset utilities for the Number Guesser project."""
+"""MNIST Dataset/DataLoader utilities used by the training pipeline."""
 
-# Step 0 placeholder.
-# MNIST Dataset/DataLoader implementation will be added in the next step.
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-import matplotlib.pyplot as plt
-
 
 
 def get_dataloaders(batch_size=64):
+    # CHANGE: removed unused plotting import and old placeholder comments.
+    # ToTensor() is the exact training preprocessing currently used by the model:
+    # uint8 MNIST pixels -> float tensors in [0, 1], shape [1, 28, 28].
     transform = transforms.ToTensor()
 
-    train_dataset = datasets.MNIST( # our train data set
+    train_dataset = datasets.MNIST(
         root="data",
         train=True,
         download=True,
         transform=transform,
     )
-
-    test_dataset = datasets.MNIST(   # our test data set
+    test_dataset = datasets.MNIST(
         root="data",
         train=False,
         download=True,
         transform=transform,
     )
 
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,          # turning our datasets (images )----> arr or batches of images (64 image per batch) 
-        shuffle=True,
-    )
-
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-    )
-
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     return train_loader, test_loader
-
-
-
