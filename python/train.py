@@ -1,7 +1,9 @@
-"""Training entry point for Number Guesser.
+"""Training utilities for the Number Guesser CNN.
 
-    our main model is an convolutional neural network (CNN) for now 
+Training happens in PyTorch. The resulting state_dict is exported for the C
+inference runtime by python/export.py.
 """
+
 import torch
 
 
@@ -11,35 +13,36 @@ def train_step(model: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                accuracy_fn,
                device):
-    train_loss, train_acc = 0, 0
+    """Train the model for one epoch and print average loss/accuracy."""
     model.to(device)
-    model.train()  # put model in train mode
-    for batch, (X, y) in enumerate(data_loader):
-        # Send data to GPU
+    model.train()
+    train_loss = 0.0
+    train_acc = 0.0
+
+    for X, y in data_loader:
         X, y = X.to(device), y.to(device)
 
         # 1. Forward pass
         y_pred = model(X)
 
-        # 2. Calculate loss
+        # 2. Loss + accuracy
         loss = loss_fn(y_pred, y)
-        train_loss += loss
-        train_acc += accuracy_fn(y_true=y,
-                                 y_pred=y_pred.argmax(dim=1))  # Go from logits -> pred labels
+        train_loss += loss.item()
+        train_acc += accuracy_fn(y_true=y, y_pred=y_pred.argmax(dim=1))
 
-        # 3. Optimizer zero grad
+        # 3. Clear old gradients
         optimizer.zero_grad()
 
-        # 4. Loss backward
+        # 4. Backpropagation
         loss.backward()
 
-        # 5. Optimizer step
+        # 5. Update parameters
         optimizer.step()
 
-    # Calculate loss and accuracy per epoch and print out what's happening
     train_loss /= len(data_loader)
     train_acc /= len(data_loader)
     print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
+    return train_loss, train_acc
 
 
 def test_step(model: torch.nn.Module,
@@ -47,25 +50,20 @@ def test_step(model: torch.nn.Module,
               loss_fn: torch.nn.Module,
               accuracy_fn,
               device):
-    test_loss, test_acc = 0, 0
+    """Evaluate the model for one epoch without updating its weights."""
     model.to(device)
-    model.eval()  # put model in eval mode
-    # Turn on inference context manager
+    model.eval()
+    test_loss = 0.0
+    test_acc = 0.0
+
     with torch.inference_mode():
         for X, y in data_loader:
-            # Send data to GPU
             X, y = X.to(device), y.to(device)
-
-            # 1. Forward pass
             test_pred = model(X)
+            test_loss += loss_fn(test_pred, y).item()
+            test_acc += accuracy_fn(y_true=y, y_pred=test_pred.argmax(dim=1))
 
-            # 2. Calculate loss and accuracy
-            test_loss += loss_fn(test_pred, y)
-            test_acc += accuracy_fn(y_true=y,
-                y_pred=test_pred.argmax(dim=1)  # Go from logits -> pred labels
-            )
-
-        # Adjust metrics and print out
-        test_loss /= len(data_loader)
-        test_acc /= len(data_loader)
-        print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+    test_loss /= len(data_loader)
+    test_acc /= len(data_loader)
+    print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+    return test_loss, test_acc
