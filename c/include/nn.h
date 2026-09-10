@@ -5,12 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/*
- * C inference model.
- *
- * IMPORTANT: this struct mirrors the exact tensor shapes exported by
- * python/export.py. C is only doing inference; training remains in PyTorch.
- */
 typedef struct {
     float conv1_w[32 * 1 * 3 * 3];
     float conv1_b[32];
