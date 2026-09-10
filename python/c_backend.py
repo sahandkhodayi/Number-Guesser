@@ -1,15 +1,6 @@
-"""Small Python wrapper for the optional C inference backend.
+"""Optional Python wrapper around the C inference shared library."""
 
-The recommended first integration boundary is a shared library loaded with
-ctypes. The C API stays independent from the GUI: Python passes 784 float32
-pixels and receives 10 logits.
-
-This wrapper is intentionally isolated so the GUI can use PyTorch while the C
-backend is being verified. Once libnumber_guesser is built, the GUI can switch
-backends without changing drawing/preprocessing code.
-"""
-
-from ctypes import CDLL, POINTER, c_float, c_int, c_char_p
+from ctypes import CDLL, POINTER, c_float, c_int, pointer
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CBackend:
+    """Call the C CNN through a tiny ctypes FFI boundary."""
+
     def __init__(self, library_path: str | Path) -> None:
         self.lib = CDLL(str(library_path))
         self.lib.number_guesser_predict.argtypes = [
@@ -34,8 +27,9 @@ class CBackend:
         status = self.lib.number_guesser_predict(
             array.ctypes.data_as(POINTER(c_float)),
             logits.ctypes.data_as(POINTER(c_float)),
-            POINTER(c_int)(prediction),
+            pointer(prediction),
         )
         if status != 0:
             raise RuntimeError(f"C backend returned status {status}")
+
         return prediction.value, logits
