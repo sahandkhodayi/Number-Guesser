@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#define WEIGHTS_FILE_BYTES 175016
 /*
  * C inference model.
  *
