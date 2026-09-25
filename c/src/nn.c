@@ -1,5 +1,7 @@
 #include "../include/nn.h"
 
+#include <math.h>
+
 void linear(const float *W, const float *b, const float *x, float *y,
             int in_features, int out_features) {
     for (int o = 0; o < out_features; ++o) {
