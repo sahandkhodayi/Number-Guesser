@@ -1,69 +1,109 @@
-"""Training utilities for the Number Guesser CNN.
+"""Training entry point and one-epoch helpers for Number Guesser."""
 
-Training happens in PyTorch. The resulting state_dict is exported for the C
-inference runtime by python/export.py.
-"""
+from pathlib import Path
 
 import torch
+from torch import nn
+
+from dataset import get_dataloaders
+from helper_functions import accuracy_fn
+from model import _MainModel
+
+ROOT = Path(__file__).resolve().parents[1]
+MODEL_PATH = ROOT / "models" / "number_guesser_model.pth"
 
 
-def train_step(model: torch.nn.Module,
-               data_loader: torch.utils.data.DataLoader,
-               loss_fn: torch.nn.Module,
-               optimizer: torch.optim.Optimizer,
-               accuracy_fn,
-               device):
-    """Train the model for one epoch and print average loss/accuracy."""
+def train_step(
+    model: torch.nn.Module,
+    data_loader: torch.utils.data.DataLoader,
+    loss_fn: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    accuracy_fn,
+    device,
+):
+    """Train the model for one epoch."""
     model.to(device)
     model.train()
+
     train_loss = 0.0
     train_acc = 0.0
 
     for X, y in data_loader:
         X, y = X.to(device), y.to(device)
 
-        # 1. Forward pass
-        y_pred = model(X)
+        logits = model(X)
+        loss = loss_fn(logits, y)
 
-        # 2. Loss + accuracy
-        loss = loss_fn(y_pred, y)
-        train_loss += loss.item()
-        train_acc += accuracy_fn(y_true=y, y_pred=y_pred.argmax(dim=1))
-
-        # 3. Clear old gradients
         optimizer.zero_grad()
-
-        # 4. Backpropagation
         loss.backward()
-
-        # 5. Update parameters
         optimizer.step()
+
+        train_loss += loss.item()
+        train_acc += accuracy_fn(y_true=y, y_pred=logits.argmax(dim=1))
 
     train_loss /= len(data_loader)
     train_acc /= len(data_loader)
-    print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
     return train_loss, train_acc
 
 
-def test_step(model: torch.nn.Module,
-              data_loader: torch.utils.data.DataLoader,
-              loss_fn: torch.nn.Module,
-              accuracy_fn,
-              device):
-    """Evaluate the model for one epoch without updating its weights."""
+def test_step(
+    model: torch.nn.Module,
+    data_loader: torch.utils.data.DataLoader,
+    loss_fn: torch.nn.Module,
+    accuracy_fn,
+    device,
+):
+    """Evaluate the model for one epoch without updating weights."""
     model.to(device)
     model.eval()
+
     test_loss = 0.0
     test_acc = 0.0
 
     with torch.inference_mode():
         for X, y in data_loader:
             X, y = X.to(device), y.to(device)
-            test_pred = model(X)
-            test_loss += loss_fn(test_pred, y).item()
-            test_acc += accuracy_fn(y_true=y, y_pred=test_pred.argmax(dim=1))
+            logits = model(X)
+            test_loss += loss_fn(logits, y).item()
+            test_acc += accuracy_fn(y_true=y, y_pred=logits.argmax(dim=1))
 
     test_loss /= len(data_loader)
     test_acc /= len(data_loader)
-    print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
     return test_loss, test_acc
+
+
+def main():
+    epochs = 5
+    batch_size = 64
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    train_loader, test_loader = get_dataloaders(batch_size=batch_size)
+
+    model = _MainModel(input_shape=1, hidden_units=32, output_shape=10)
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+    print(f"Device: {device}")
+    print(f"Epochs: {epochs}")
+    print(f"Batch size: {batch_size}")
+
+    for epoch in range(epochs):
+        train_loss, train_acc = train_step(
+            model, train_loader, loss_fn, optimizer, accuracy_fn, device
+        )
+        test_loss, test_acc = test_step(
+            model, test_loader, loss_fn, accuracy_fn, device
+        )
+        print(
+            f"Epoch {epoch + 1}/{epochs} | "
+            f"train loss={train_loss:.5f} | train acc={train_acc:.2f}% | "
+            f"test loss={test_loss:.5f} | test acc={test_acc:.2f}%"
+        )
+
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(model.state_dict(), MODEL_PATH)
+    print(f"Saved model to: {MODEL_PATH}")
+
+
+if __name__ == "__main__":
+    main()
