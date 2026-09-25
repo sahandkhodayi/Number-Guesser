@@ -5,6 +5,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/*
+ * C inference model.
+ *
+ * IMPORTANT: these arrays mirror the exact tensor shapes exported by
+ * python/export.py. Python owns training; C owns deployment/inference.
+ *
+ * If the PyTorch architecture or export order changes, these declarations
+ * and the model loader must be updated together.
+ */
 typedef struct {
     float conv1_w[32 * 1 * 3 * 3];
     float conv1_b[32];
@@ -18,6 +27,14 @@ typedef struct {
     float fc_b[10];
 } CnnModel;
 
+/*
+ * Channel-first contiguous tensor:
+ *
+ * index(c, y, x) = ((c * height) + y) * width + x
+ *
+ * Keeping this layout consistent with the PyTorch export contract is critical
+ * for numerical parity.
+ */
 typedef struct {
     float *data;
     int channels;
