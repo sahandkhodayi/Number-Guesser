@@ -11,9 +11,14 @@ venv/
 models/*.pth
 models/*.pt
 models/*.onnx
+models/*.bin
+
+# C-local model artifacts
+c/models/*.pth
+c/models/*.pt
+c/models/*.bin
 
 # Datasets
-# Keep the directory structure, but do not commit downloaded datasets.
 data/*
 !data/.gitkeep
 
