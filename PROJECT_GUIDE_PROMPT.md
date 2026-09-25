@@ -1,320 +1,109 @@
-# Prompt for the AI That Will Write the Number Guesser Project Guide
-
-Copy the prompt below into another AI agent/research assistant. Its job is **not** to modify the repository. Its job is to study the existing Number Guesser repository and write a comprehensive Markdown **project guidebook + roadmap** that explains exactly how to continue the project.
-
----
-
-## PROMPT START
-
-You are writing the long-term technical guidebook for the repository:
-
-**GitHub:** https://github.com/sahandkhodayi/Number-Guesser
-
-The project is a career-keystone ML systems project by a CS/ML student.
-
-Your output must be a Markdown file named:
-
-`PROJECT_GUIDE.md`
-
-Do NOT modify source code. Do NOT invent completed work. Do NOT silently redesign the project.
-
-Your job is to inspect the repository first, understand what is actually implemented, and then produce a rigorous step-by-step guide for continuing it.
-
-# 1. Project north star
-
-The project should eventually demonstrate this complete chain:
-
-```
-Mathematical idea
-      ↓
-PyTorch training/reference implementation
-      ↓
-trained CNN weights
-      ↓
-weight export
-      ↓
-C tensor/runtime implementation
-      ↓
-C/PyTorch numerical parity
-      ↓
-C preprocessing
-      ↓
-Raylib C user interface
-      ↓
-prediction + probabilities
-      ↓
-activation/logit visualization
-      ↓
-tests + sanitizers + CI
-      ↓
-profiling + optimization
-      ↓
-reproducible deployment
-```
-
-The final application should use the **C/Raylib UI** as the main runtime.
-
-Python remains important for:
-
-- training,
-- evaluation,
-- model export,
-- reference calculations,
-- benchmark generation,
-- experiments.
+# Number Guesser — Continuation Guidebook Prompt
+
+You are a technical writer, ML mentor, C systems engineer, and code-reviewer.
+Repository: https://github.com/sahandkhodayi/Number-Guesser
 
-Python should not be required for normal application inference.
+Your ONLY task is to inspect the repository and write PROJECT_GUIDE.md.
+Do NOT modify source code.
+Do NOT invent completed work.
+Do NOT produce a beginner course from zero.
 
-# 2. Inspect before writing
+IMPORTANT: This project already has a trained CNN, exported weights, a C inference implementation, preprocessing, a Raylib/C UI, benchmark/reference tooling, model loading, and CMake. The guide must start from THIS STATE and explain what we do NEXT.
 
-Before producing the guide, inspect:
+## Goal
 
-- `README.md`
-- `.gitignore`
-- `python/model.py`
-- `python/dataset.py`
-- `python/train.py`
-- `python/evaluate.py`
-- `python/export.py`
-- `python/gui.py`
-- `python/c_backend.py`
-- `c/include/nn.h`
-- `c/include/ui.h`
-- `c/src/nn.c`
-- `c/src/ui.c`
-- `c/src/main.c`
-- `c/src/backend_api.c`
-- `c/tools/verify.c`
-- everything in `benchmark/`
-- build configuration
-- model/weight-loading code
-- tests
-- repository history when useful
+Write a serious long-term engineering guidebook that combines:
+- continuation roadmap
+- implementation manual
+- mathematics connected to the existing code
+- testing and verification manual
+- debugging manual
+- performance roadmap
+- ML experiment roadmap
+- definitions of done
 
-Use the actual repository as the source of truth.
+The north-star system is:
 
-If documentation and code disagree, explicitly identify the disagreement instead of silently choosing one.
+PyTorch training/reference -> exported weights -> C model loader -> C tensors/CNN -> C preprocessing -> Raylib UI -> prediction/probabilities -> numerical parity -> tests/sanitizers/CI -> profiling/optimization -> reproducible deployment.
 
-# 3. The guidebook must teach the project, not merely list tasks
+Python is for training, evaluation, export, reference calculations, and experiments.
+C/Raylib is the main application runtime.
 
-For every major stage explain:
+## 1. Inspect the repository first
 
-1. **What we are building**
-2. **Why we are building it**
-3. **What prerequisite knowledge is needed**
-4. **The mathematics**
-5. **The tensor shapes**
-6. **The memory representation in C**
-7. **How PyTorch implements the reference**
-8. **How C should reproduce it**
-9. **How to test it**
-10. **How to prove it is correct**
-11. **Common bugs**
-12. **What success looks like**
-13. **What to do next**
+Read the actual current versions of:
+- README.md
+- CMakeLists.txt
+- c/README.md
+- c/include/nn.h
+- c/include/ui.h
+- c/src/nn.c
+- c/src/ui.c
+- c/src/main.c
+- c/tools/verify.c
+- benchmark/*
+- python/model.py
+- python/dataset.py
+- python/train.py
+- python/evaluate.py
+- python/export.py
+- python/helper_functions.py
+- models/*
+- tests/*
+- .gitignore
+- relevant recent Git history
 
-The guide should teach the reader enough that they can implement the system themselves rather than blindly copy code.
+Treat code as the primary source of truth. If README and code disagree, explicitly report the disagreement and document the real state.
 
-# 4. Required mathematics coverage
+Start PROJECT_GUIDE.md with a factual 'Current State -> Target State' table:
 
-Explain the mathematics needed for the actual project.
+| Subsystem | Current state | Evidence/file | Verification status | Next action |
+|---|---|---|---|---|
 
-At minimum cover:
+Do not call something complete merely because code exists.
 
-## Linear algebra
+## 2. Start from the current implementation
 
-- vectors
-- matrices
-- matrix multiplication
-- dot products
-- tensor shapes
-- indexing
-- flattening
-- linear layers
+Do NOT teach 'what is C', 'what is a CNN', or how to write a MaxPool2D from scratch unless a short explanation is necessary to understand an existing implementation.
 
-For:
+Example: MaxPool2D already exists. Document:
+- where it is implemented
+- its current algorithm
+- its tensor shapes
+- why -INFINITY is required for an all-negative pooling window
+- how it corresponds to PyTorch MaxPool2d(2,2)
+- what unit tests should verify it
+- how parity should be measured
+- what future optimization is possible
+- then move to the next milestone.
 
-[
-y = Wx+b
-]
+Apply this rule to every existing subsystem.
 
-explain exactly what each dimension means.
+## 3. Immediate milestone: make the existing system trustworthy
 
-## Convolution
+The first objective is NOT adding flashy features.
 
-Explain:
+The first objective is:
+BUILD -> RUN -> LOAD MODEL -> RUN KNOWN INPUT -> COMPARE WITH PYTORCH -> TEST -> SANITIZE.
 
-- kernel/filter
-- channels
-- output channels
-- spatial dimensions
-- stride
-- padding
-- cross-correlation vs mathematical convolution
-- output-size formula
+Give exact commands based on the actual repository and actual build system.
 
-Use the actual project's:
+Cover:
+- clean CMake configure
+- clean build
+- strict compiler warnings
+- running the Raylib application
+- model path
+- model loading validation
+- known MNIST inference
+- failure handling
 
-- kernel = 3
-- stride = 1
-- padding = 1
+## 4. C/PyTorch numerical parity
 
-Show why spatial dimensions remain unchanged.
+Make this a first-class project milestone.
 
-## ReLU
+Compare the exact same input and exact same exported weights through:
 
-Explain:
-
-[
-operatorname{ReLU}(x)=max(0,x)
-]
-
-and why it does not change tensor shape.
-
-## Max pooling
-
-Explain:
-
-- 2×2 window
-- stride 2
-- selecting the maximum
-- why 28×28 becomes 14×14
-- why 14×14 becomes 7×7
-
-## Flattening
-
-Explain:
-
-[
-32	imes7	imes7=1568
-]
-
-and exactly how the contiguous C buffer corresponds to the PyTorch tensor.
-
-## Softmax
-
-Explain:
-
-[
-p_i=rac{e^{z_i}}{sum_j e^{z_j}}
-]
-
-and why subtracting the maximum logit before exponentiation improves numerical stability.
-
-## Loss
-
-Explain CrossEntropyLoss at the level needed to understand training, logits, softmax, and classification.
-
-## Gradient descent
-
-Explain:
-
-- loss
-- gradient
-- learning rate
-- parameter update
-- why training and inference are different
-
-Do not turn this into a generic math textbook. Only include mathematics that helps understand this project.
-
-# 5. Exact CNN shape walkthrough
-
-Show the entire shape transformation:
-
-```
-[1, 28, 28]
-      ↓
-[32, 28, 28]
-      ↓
-[32, 28, 28]
-      ↓
-[32, 14, 14]
-      ↓
-[32, 14, 14]
-      ↓
-[32, 14, 14]
-      ↓
-[32, 14, 14]
-      ↓
-[32, 7, 7]
-      ↓
-1568
-      ↓
-10
-```
-
-Explain every transition.
-
-# 6. C implementation tutorial
-
-Teach the C implementation from the bottom upward:
-
-### Step A — Tensor structure
-
-Explain:
-
-```c
-typedef struct {
-    float *data;
-    int channels;
-    int height;
-    int width;
-} Tensor;
-```
-
-Explain ownership.
-
-Explain allocation.
-
-Explain freeing.
-
-Explain contiguous indexing:
-
-```
-((c * height) + y) * width + x
-```
-
-Explain why `size_t` matters for memory indexing/allocation.
-
-### Step B — Linear layer
-
-Explain:
-
-```
-y[o] = b[o] + Σ W[o,i]x[i]
-```
-
-Then connect it to the C row-major implementation.
-
-### Step C — ReLU
-
-### Step D — Conv2D
-
-Walk through the nested loops line by line conceptually.
-
-Explain the weight index:
-
-```
-(((oc * in_channels + ic) * k + ky) * k + kx)
-```
-
-### Step E — MaxPool2D
-
-### Step F — Full forward pass
-
-Explain memory lifetime after every layer.
-
-### Step G — Model loading
-
-Explain why the binary weight order is an ABI-like contract.
-
-# 7. PyTorch ↔ C parity tutorial
-
-This must be one of the most detailed sections.
-
-Explain how to generate reference tensors from PyTorch:
-
-```
 input
 conv1
 relu1
@@ -326,375 +115,449 @@ relu3
 conv4
 relu4
 pool2
+flatten
 logits
-```
 
-Then explain how C produces the same tensors.
-
-For every stage explain:
-
-- shape comparison
-- max absolute difference
-- mean absolute difference
+For every stage report:
+- shape
+- max absolute error
+- mean absolute error
 - tolerance
-- first mismatch diagnosis
+- PASS/FAIL
 
-Explain why comparing only the final prediction is insufficient.
+Explain why final prediction equality is NOT enough.
 
-Include a debugging decision tree:
+Give a debugging tree:
 
-```
-Mismatch?
-   ↓
-input?
-   ↓
-weights?
-   ↓
-conv1?
-   ↓
-relu?
-   ↓
-pool?
-   ↓
-flatten?
-   ↓
-linear?
-```
+Mismatch -> input -> weights -> conv1 -> ReLU -> conv2 -> pool -> conv3 -> conv4 -> flatten -> linear.
 
-# 8. Preprocessing tutorial
+Always fix the FIRST failing stage before changing later code.
 
-This deserves its own chapter.
+Explain how PyTorch tensor layout maps to C contiguous memory.
 
-Explain the difference between:
+## 5. Existing CNN audit
 
-- MNIST training distribution
-- arbitrary mouse drawings
-
-Explain domain shift.
-
-Then explain the intended preprocessing pipeline:
-
-```
-canvas
-→ foreground detection
-→ bounding box
-→ square crop
-→ margin
-→ resize
-→ centering
-→ 28×28
-→ normalization
-→ CNN
-```
-
-Explain why preprocessing can destroy otherwise correct model performance.
-
-Explain how to create deterministic preprocessing tests.
-
-# 9. C/Raylib UI tutorial
-
-The main application is the C/Raylib UI.
-
-Explain:
-
-- event loop
-- mouse input
-- drawing
-- brush
-- canvas storage
-- clear button
-- predict button
-- keyboard shortcuts
-- rendering
-- probability bars
-- prediction display
-
-Then explain how the UI connects to the CNN.
-
-The UI should remain understandable and should not become a giant monolithic file.
-
-Recommend a clean future separation:
-
-```
-app/
-ui/
-preprocess/
-model/
-tensor/
-io/
-debug/
-```
-
-Do not force this refactor prematurely; explain when it becomes justified.
-
-# 10. Testing roadmap
-
-Design tests for:
-
-### Tensor
-
-- allocation
+Audit, do not blindly rewrite:
+- Tensor allocation/free
 - indexing
-- set/get
-- free
-
-### Math
-
+- Linear
 - ReLU
-- argmax
-- linear layer
 - Conv2D
-- MaxPool
+- MaxPool2D
+- model_forward
+- model_load
 
-### Preprocessing
+For every component include:
+1. current implementation
+2. correctness contract
+3. current tensor shapes
+4. exact PyTorch equivalent
+5. tests
+6. numerical parity method
+7. edge cases
+8. memory ownership
+9. future optimization only after profiling.
 
+Discuss bugs such as:
+- NCHW vs NHWC
+- wrong flatten order
+- incorrect weight ordering
+- padding/stride errors
+- integer overflow
+- invalid dimensions
+- uninitialized memory
+- use-after-free
+- double free.
+
+## 6. Mathematics — only where it is needed
+
+Do not restart the user's mathematics education from zero.
+
+Explain the mathematics in direct connection with the code.
+
+### Linear algebra
+- vectors
+- matrices
+- matrix multiplication
+- dot products
+- linear layer y = Wx + b
+- tensor shapes
+- flattening
+- contiguous indexing
+
+### Convolution
+- kernel/filter
+- channels
+- output channels
+- stride
+- padding
+- cross-correlation vs mathematical convolution
+- output-size formula
+- the actual project's 3x3, stride 1, padding 1 configuration.
+
+### ReLU
+ReLU(x)=max(0,x).
+Explain why shape is unchanged.
+
+### MaxPool2D
+Explain the EXISTING implementation.
+Explain 2x2 stride 2 and why 28x28 -> 14x14 -> 7x7.
+Explain why initializing the maximum with 0 is wrong when values can all be negative and why -INFINITY is appropriate.
+
+### Flatten
+Explain 32*7*7=1568 and exactly how the C buffer corresponds to the PyTorch tensor.
+
+### Softmax
+Explain stable softmax using max-logit subtraction.
+
+### Cross entropy
+Explain logits, target classes, softmax probabilities, and CrossEntropyLoss at the level required to understand training.
+
+### Optimization
+Connect gradients, chain rule, SGD/Adam, learning rate, and batch size to the existing training code.
+
+## 7. Preprocessing and domain shift
+
+Audit the existing C preprocessing rather than replacing it blindly.
+
+Explain the current pipeline and then establish the target:
+
+canvas -> foreground detection -> bounding box -> square crop -> margin -> resize -> centering -> 28x28 -> normalization -> CNN.
+
+Explain why MNIST and mouse drawings have different distributions.
+
+Create a deterministic preprocessing test matrix:
 - blank canvas
 - centered digit
-- shifted digit
+- top-left digit
+- bottom-right digit
 - tiny digit
-- large digit
-- different stroke widths
+- huge digit
+- wide digit
+- tall digit
+- thick stroke
+- thin stroke.
 
-### Model
+Explain how to save 28x28 intermediate tensors/images for inspection.
 
-- weight loading
-- invalid model size
-- forward pass
+## 8. Raylib C UI is the main product
 
-### Integration
+Do NOT create another Python GUI.
 
+Future C UI roadmap:
+- smooth drawing
+- clear/reset
+- predict
+- prediction
+- confidence
+- ten-class probability bars
+- preprocessing preview
+- optional debug mode
+- optional activation visualization
+- useful keyboard shortcuts
+- clean error states
+- stable frame rate.
+
+Explain how UI code should eventually be separated into responsibilities without premature architecture work.
+
+Suggested eventual conceptual modules:
+app / ui / input / preprocess / tensor / model / debug / io.
+
+## 9. Activation visualization
+
+Make this a signature feature later.
+
+Visualize:
+- input
+- Conv1 feature maps
+- Conv2 feature maps
+- Conv3 feature maps
+- Conv4 feature maps
+- pooled outputs
+- logits
+- probabilities.
+
+Explain memory ownership and how to expose tensors safely without unnecessary allocations.
+
+## 10. Model format
+
+The current raw binary format can remain for the current milestone.
+
+Future versioned format should include:
+- magic
+- version
+- architecture ID
+- dtype
+- tensor count
+- tensor metadata
+- payload
+- checksum.
+
+Explain why an unstructured sequence of floats is fragile and how the future loader should reject incompatible models.
+
+## 11. Tests
+
+Design actual tests for:
+
+Tensor:
+- allocation
+- shape
+- indexing
+- initialization
+- free.
+
+Math:
+- linear
+- ReLU
+- argmax
+- Conv2D
+- MaxPool2D.
+
+Model:
+- valid model loading
+- truncated model rejection
+- invalid size rejection
+- forward pass.
+
+Preprocessing:
+- all edge cases listed above.
+
+Integration:
+- known MNIST input
 - C/PyTorch parity
-- end-to-end prediction
+- end-to-end prediction.
 
-Explain what each test proves.
+Memory:
+- AddressSanitizer
+- UndefinedBehaviorSanitizer
+- Valgrind where useful.
 
-# 11. Debugging and failure modes
+Give concrete commands where possible.
 
-Include detailed explanations of likely bugs:
+## 12. Build system and CI
 
-- wrong tensor indexing
-- NHWC vs NCHW confusion
-- wrong weight order
-- wrong convolution indexing
-- padding errors
-- stride errors
-- flatten order mismatch
-- model file path mismatch
-- wrong working directory
-- float precision differences
-- preprocessing mismatch
-- stale model weights
-- shape mismatch
-- memory leaks
-- double free
-- use-after-free
-- uninitialized memory
-- integer overflow
-- wrong compiler/linker flags
+CMake is the canonical C build system.
 
-# 12. Performance roadmap
+Standard flow:
 
-Do not optimize before correctness.
+cmake -S . -B build
+cmake --build build
+
+Plan future targets:
+- number_guesser
+- unit_tests
+- benchmark_c
+- parity_test.
+
+Design CI for:
+- configure
+- compile with warnings
+- tests
+- benchmark smoke test
+- optional sanitizer build
+- optional parity test.
+
+CI should fail if numerical parity fails.
+
+## 13. Profiling and optimization
+
+Do NOT optimize yet.
 
 First measure:
+- model loading
+- preprocessing
+- Conv1
+- Conv2
+- Pool1
+- Conv3
+- Conv4
+- Pool2
+- Linear
+- total inference
+- allocations
+- peak memory.
 
-- total inference time
-- preprocessing time
-- each layer
-- allocation count
-- memory usage
+Then consider:
+1. buffer reuse
+2. fewer allocations
+3. cache-friendly loops
+4. convolution loop ordering
+5. compiler optimization
+6. SIMD
+7. parallelism
+8. quantization.
 
-Then explain optimization possibilities:
+Every optimization must have:
+Hypothesis -> baseline benchmark -> implementation -> correctness/parity -> new benchmark -> conclusion.
 
-- buffer reuse
-- allocation reduction
-- cache locality
-- loop ordering
-- compiler optimization
-- SIMD
-- parallelism
-- quantization
+## 14. ML experiments after deployment correctness
 
-For every optimization explain:
+Only after parity and testing are trustworthy.
 
-- why it might help,
-- what it changes,
-- what could break,
-- how to benchmark it.
+Possible experiments:
+- augmentation
+- normalization
+- kernel sizes
+- channel counts
+- architecture depth
+- optimizer
+- learning rate
+- batch size
+- regularization.
 
-# 13. Build and run guide
+Every experiment must record:
+Hypothesis -> one meaningful change -> training configuration -> metric -> result -> interpretation.
 
-Write exact commands for:
+Do not change five variables at once.
 
-### Windows + MinGW
+## 15. Learning roadmap tied to this project
 
-Include:
+Map D2L and Mathematics for Machine Learning to the repository.
 
-- prerequisites
-- raylib installation
-- compiler
-- build
-- run
-- model path
-
-### WSL / Ubuntu
-
-Include:
-
-- GCC
-- CMake
-- raylib
-- build
-- run
-
-### Python
-
-Include:
-
-- virtual environment
-- dependency installation
-- dataset download
-- evaluation
-- export
-
-### Verification
-
-Show exactly how to run:
-
-- PyTorch reference generation
-- C benchmark
-- comparison
-
-If exact commands depend on a file that does not currently exist, say so and explain what needs to be added rather than inventing a command.
-
-# 14. Project phases
-
-Produce a staged roadmap:
-
-## Phase 1
-Baseline + reproducibility
-
-## Phase 2
-C/PyTorch parity
-
-## Phase 3
-Preprocessing
-
-## Phase 4
-C/Raylib application
-
-## Phase 5
-Activation visualization
-
-## Phase 6
-Tests + sanitizers + CI
-
-## Phase 7
-Profiling + optimization
-
-## Phase 8
-Versioned model format
-
-## Phase 9
-ML experiments
-
-For each phase provide:
-
-- goal
-- prerequisites
-- exact tasks
-- math to study
-- code to write
-- tests to add
-- benchmark to run
-- definition of done
-
-# 15. Learning roadmap
-
-The author is learning ML and mathematics while building this.
-
-Connect the project to:
-
-### D2L
-
+D2L:
 - tensors
 - CNNs
-- training
-- evaluation
-- generalization
+- training/evaluation
 - optimization
+- generalization.
 
-### Mathematics for Machine Learning
-
+MML:
 - linear algebra
 - calculus
 - probability
-- optimization
+- optimization.
 
-For every mathematical topic explain exactly where it appears in Number Guesser.
+For every topic say exactly which code/file/concept requires it.
 
-# 16. AI-assisted development rules
+## 16. AI-agent workflow
 
-The author will use AI coding agents.
+Recommend:
 
-Explain a safe workflow:
+inspect -> understand -> plan -> implement one change -> compile -> test -> benchmark -> inspect diff -> document -> commit.
 
-```
-Read
-→ understand
-→ propose
-→ implement
-→ compile
-→ test
-→ benchmark
-→ inspect diff
-→ commit
-```
-
-AI agents must not:
-
-- invent benchmark results
-- claim parity without measurement
-- rewrite architecture casually
-- delete working code
+Agents must not:
+- claim parity without measurements
+- invent benchmarks
+- rewrite working code casually
 - optimize without profiling
-- hide failures
-- add unnecessary dependencies
+- change CNN architecture without a documented experiment
+- add dependencies without justification
+- delete code without checking references.
 
-# 17. Definition of a professional milestone
+## 17. Phased roadmap
+
+Build a detailed roadmap from the CURRENT repository state:
+
+Phase 0 — Clean baseline
+- build
+- run
+- model loading
+- remove obsolete code
+- reproducibility.
+
+Phase 1 — Numerical parity
+- reference tensors
+- C tensors
+- comparison
+- tolerance
+- first mismatch.
+
+Phase 2 — Preprocessing
+- deterministic preprocessing
+- edge-case tests
+- saved 28x28 inspection.
+
+Phase 3 — C/Raylib product
+- drawing
+- prediction
+- probability UI
+- robust error states.
+
+Phase 4 — Explainable inference
+- activations
+- logits
+- layer inspection.
+
+Phase 5 — Engineering quality
+- tests
+- sanitizers
+- CI
+- documentation.
+
+Phase 6 — Performance
+- profiling
+- buffer reuse
+- cache/loop optimization
+- SIMD only if justified.
+
+Phase 7 — Model format
+- versioning
+- validation
+- checksum.
+
+Phase 8 — ML research experiments
+- controlled experiments
+- ablations
+- model improvements.
+
+For EACH phase give:
+- objective
+- current starting point
+- exact files
+- code work
+- mathematics
+- tests
+- commands
+- benchmark
+- definition of done.
+
+## 18. Definition of done
 
 A milestone is complete only when:
-
 - implementation works
 - tests exist
 - benchmark passes
-- documentation is updated
+- docs match reality
 - build is reproducible
-- no known memory errors remain
-- C/PyTorch parity is demonstrated where relevant
+- sanitizer errors are absent
+- parity is demonstrated where relevant
+- performance claims have measurements.
 
-# 18. Writing style
+## 19. Final section: Next 10 Tasks
 
-Write the final guidebook like a **technical textbook + lab manual + project roadmap**.
+End the guide with exactly ten concrete tasks based on the repository's current state.
 
-Use:
+Prioritize roughly:
+1. clean build
+2. application startup
+3. model loading
+4. known MNIST inference
+5. layer-by-layer parity
+6. preprocessing validation
+7. unit tests
+8. sanitizer pass
+9. CI
+10. activation visualization.
 
-- Markdown
-- diagrams in ASCII where useful
-- equations
-- code snippets
-- tables
-- checklists
-- troubleshooting sections
+Do not jump directly to a new architecture.
 
-Do NOT write generic motivational filler.
+## Output quality
 
-Do NOT write "learn C first" without connecting it to the exact code.
+PROJECT_GUIDE.md must feel like a serious internal engineering document for a multi-month career project.
 
-Do NOT simply summarize the repository.
+It must tell the author:
+- where the project is now
+- what is already solved
+- what is not yet proven
+- what to study
+- what code to change
+- how to test it
+- how to benchmark it
+- why the step matters
+- what exact milestone comes next.
 
-The guide must tell the reader **exactly what to study, exactly what to implement, exactly how to verify it, and why each step matters.**
-
-End with a concise "next 10 tasks" checklist based on the repository's actual current state.
-
-## PROMPT END
+Do not write motivational filler.
+Do not restart from beginner programming lessons.
+Do not repeat implementation tutorials for already-working components unless auditing, testing, or extending them requires it.
+Do not invent results.
+Use the repository's real filenames, functions, tensor shapes, and architecture.
