@@ -17,7 +17,7 @@
 typedef struct {
     float conv1_w[32 * 1 * 3 * 3];
     float conv1_b[32];
-    float conv2_w[32 * 32 * 3 * 3];
+    float conv2_w[32 * 32 * 3 * 3]; // first number is the output and second number is input channel
     float conv2_b[32];
     float conv3_w[32 * 32 * 3 * 3];
     float conv3_b[32];
