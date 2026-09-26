@@ -87,7 +87,7 @@ static void run_prediction(AppState *app, const CnnModel *model) {
 
 int main(void) {
     CnnModel model;
-    int model_ok = (model_load(&model, "models/weights.bin") == 0);
+    int model_ok = (model_load(&model, "../models/weights.bin") == 0);
     if (!model_ok) {
         fprintf(stderr, "Warning: could not load models/weights.bin\n");
     }

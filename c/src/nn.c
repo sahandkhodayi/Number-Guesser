@@ -1,25 +1,21 @@
 #include "../include/nn.h"
-
-#include <math.h>
+#include <math.h>   /* added: needed for -INFINITY below */
 
 void linear(const float *W, const float *b, const float *x, float *y,
             int in_features, int out_features) {
-    for (int o = 0; o < out_features; ++o) {
+    for (int o = 0; o < out_features; o++) {
         float sum = b[o];
-
-        /* W is row-major: W + o * in_features points at output neuron o. */
-        const float *row = W + o * in_features;
-
-        for (int i = 0; i < in_features; ++i) {
+        const float *row = W + o * in_features;  /* pointer arithmetic: */
+                                                   /* start of row o */
+        for (int i = 0; i < in_features; i++) {
             sum += row[i] * x[i];
         }
-
         y[o] = sum;
     }
 }
 
 void relu(float *x, int n) {
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n; i++) {
         if (x[i] < 0.0f) x[i] = 0.0f;
     }
 }
@@ -27,184 +23,144 @@ void relu(float *x, int n) {
 int argmax(const float *x, int n) {
     int best_idx = 0;
     float best_val = x[0];
-
-    for (int i = 1; i < n; ++i) {
+    for (int i = 1; i < n; i++) {
         if (x[i] > best_val) {
             best_val = x[i];
             best_idx = i;
         }
     }
-
     return best_idx;
 }
 
+//
+
 Tensor tensor_alloc(int channels, int height, int width) {
-    Tensor t = {0};
+    Tensor t = {0};                         /* zero-init the whole struct */
     t.channels = channels;
-    t.height = height;
+    t.height = height;     // our tesnore info
     t.width = width;
-
-    /*
-     * Allocate one contiguous CxHxW buffer.
-     * The same layout is used by tensor_get/tensor_set and the CNN kernels.
-     */
-    size_t n = (size_t)channels * (size_t)height * (size_t)width;
-    t.data = calloc(n, sizeof(float));
-
+    size_t n = (size_t)channels * (size_t)height * (size_t)width;   /* every operand cast */
+    t.data = calloc(n, sizeof(float)); // creating a heap for our data
     if (t.data == NULL) {
         fprintf(stderr, "tensor_alloc: calloc failed for %d x %d x %d\n",
                 channels, height, width);
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);                // checking for our errors
     }
-
     return t;
 }
 
 void tensor_free(Tensor *t) {
-    free(t->data);
+    free(t->data);                         // free or clearing our buffer
     t->data = NULL;
-    t->channels = t->height = t->width = 0;
+    t->channels = t->height = t->width = 0; // deleting our tensore
 }
 
 float tensor_get(const Tensor *t, int c, int y, int x) {
-    /*
-     * Channel-first contiguous indexing:
-     * ((c * height) + y) * width + x
-     */
+    /* (c*H + y) * W + x  — read inside-out:
+     *   c*H  -> rows before this channel
+     *   +y   -> this channel's row
+     *   *W   -> rows to elements
+     *   +x   -> column                                     */
     size_t index = ((size_t)c * (size_t)t->height + (size_t)y) *
                    (size_t)t->width + (size_t)x;
-    return t->data[index];
+    return t->data[index];                 // wtf?
 }
 
 void tensor_set(Tensor *t, int c, int y, int x, float value) {
     size_t index = ((size_t)c * (size_t)t->height + (size_t)y) *
                    (size_t)t->width + (size_t)x;
-    t->data[index] = value;
+    t->data[index] = value;                // setting a value at xy postion with a value!
 }
 
-void tensor_info(const Tensor *t, const char *label) {
+void tensor_info(const Tensor *t, const char *label) {  //label (str)
+
+    printf("%s: [%d, %d, %d]", label, t->channels, t->height, t->width);// Tensor structore info
+
     int n = t->channels * t->height * t->width;
-    int show = n < 5 ? n : 5;
 
-    printf("%s: [%d, %d, %d] first %d values: [",
-           label, t->channels, t->height, t->width, show);
+    int show = n < 5 ? n : 5;// if n <5 then n if not n = 5
 
-    for (int i = 0; i < show; ++i) {
-        printf("%.6f%s", t->data[i], i == show - 1 ? "" : ", ");
+    printf("  first %d values: [", show);
+
+    for (int i = 0; i < show; i++) {
+        printf("%.4f%s", t->data[i], (i == show - 1) ? "" : ", "); // printing some datas as a n example
     }
-
     printf("]\n");
+
 }
 
-void relu_tensor(Tensor *t) {
-    relu(t->data, t->channels * t->height * t->width);
-}
+void relu_tensor(Tensor *t) {              // activation function for tensor
+    relu(t->data, t->channels * t->width * t->height);
+}       // data                position of that data in structore
 
 Tensor conv2d(const Tensor *input, const float *weights, const float *bias,
               int out_channels, int k, int stride, int pad) {
-    /*
-     * Output size:
-     * floor((input + 2*padding - kernel) / stride) + 1
-     *
-     * The project uses k=3, stride=1, padding=1, so spatial dimensions
-     * remain unchanged for every convolution.
-     */
     int out_h = (input->height + 2 * pad - k) / stride + 1;
-    int out_w = (input->width + 2 * pad - k) / stride + 1;
-
+    int out_w = (input->width  + 2 * pad - k) / stride + 1;
     Tensor out = tensor_alloc(out_channels, out_h, out_w);
 
-    for (int oc = 0; oc < out_channels; ++oc) {
-        for (int oy = 0; oy < out_h; ++oy) {
-            for (int ox = 0; ox < out_w; ++ox) {
+    for (int oc = 0; oc < out_channels; oc++) {
+        for (int oy = 0; oy < out_h; oy++) {
+            for (int ox = 0; ox < out_w; ox++) {
                 float sum = bias[oc];
-
-                for (int ic = 0; ic < input->channels; ++ic) {
-                    for (int ky = 0; ky < k; ++ky) {
-                        for (int kx = 0; kx < k; ++kx) {
-                            /*
-                             * Map an output location back into the padded
-                             * input. Negative/out-of-range coordinates are
-                             * zero-padding and therefore contribute nothing.
-                             */
-                            int iy = oy * stride - pad + ky;
+                for (int ic = 0; ic < input->channels; ic++) {
+                    for (int ky = 0; ky < k; ky++) {
+                        for (int kx = 0; kx < k; kx++) {
+                            int iy = oy * stride - pad + ky; // wtf my eyes nigga holy shit
                             int ix = ox * stride - pad + kx;
-
-                            if (iy < 0 || iy >= input->height ||
-                                ix < 0 || ix >= input->width) {
-                                continue;
-                            }
-
+                            if (iy < 0 || iy >= input->height) continue;
+                            if (ix < 0 || ix >= input->width)  continue;
                             float in_val = tensor_get(input, ic, iy, ix);
-
-                            /*
-                             * PyTorch Conv2d weights are [out_c, in_c, ky, kx].
-                             * C stores the same order contiguously.
-                             */
-                            size_t w_index =
-                                (((size_t)oc * (size_t)input->channels +
-                                  (size_t)ic) * (size_t)k + (size_t)ky) *
-                                (size_t)k + (size_t)kx;
-
-                            sum += in_val * weights[w_index];
+                            size_t w_idx = (((size_t)oc * (size_t)input->channels +
+                                             (size_t)ic) * (size_t)k + (size_t)ky) *
+                                           (size_t)k + (size_t)kx;
+                            sum += in_val * weights[w_idx];
                         }
                     }
                 }
-
                 tensor_set(&out, oc, oy, ox, sum);
             }
         }
     }
-
     return out;
 }
 
 Tensor maxpool2d(const Tensor *input, int k, int stride) {
     int out_h = (input->height - k) / stride + 1;
-    int out_w = (input->width - k) / stride + 1;
-
+    int out_w = (input->width  - k) / stride + 1;        // our output block or Tensors info
     Tensor out = tensor_alloc(input->channels, out_h, out_w);
 
-    for (int c = 0; c < input->channels; ++c) {
-        for (int oy = 0; oy < out_h; ++oy) {
-            for (int ox = 0; ox < out_w; ++ox) {
-                /*
-                 * Pool values can all be negative. Starting at 0 would be
-                 * incorrect because it could win against every real value.
-                 * -INFINITY gives the window a true initial lower bound.
-                 */
-                float best = -INFINITY;
+    for (int c = 0; c < input->channels; c++) { // loop for every rgb or conv2d dims
 
-                for (int ky = 0; ky < k; ++ky) {
-                    for (int kx = 0; kx < k; ++kx) {
+        for (int oy = 0; oy < out_h; oy++) { // every row
+
+            for (int ox = 0; ox < out_w; ox++) { // ever column
+
+                float best = -INFINITY; // sentinel
+
+                for (int ky = 0; ky < k; ky++) {
+                    for (int kx = 0; kx < k; kx++) {  /*        our main winodws
+                                                                                        */
                         int iy = oy * stride + ky;
-                        int ix = ox * stride + kx;
+                        int ix = ox * stride + kx; // cordiante calculation
+                        float v = tensor_get(input, c, iy, ix); // getting the value
+                        if (v > best) best = v; // if it is bigger than our temp then it is the max in that window
 
-                        float value = tensor_get(input, c, iy, ix);
-                        if (value > best) best = value;
                     }
                 }
-
-                tensor_set(&out, c, oy, ox, best);
+                tensor_set(&out, c, oy, ox, best); // we set that cordinate compare to our output tensor
             }
         }
     }
-
     return out;
 }
 
+// Final step our forward pass
+
+/* input is a Tensor (1x28x28) ---> 10 logits (classes)
+ kernel_dakhely=3, stride=1, padding_boxTensor=1: out_size = (input + 2 - 3)/1 + 1 = input  */
+
 void model_forward(const CnnModel *m, const Tensor *input, float *logits_out) {
-    /*
-     * 1x28x28
-     * -> conv1 32x28x28
-     * -> conv2 32x28x28
-     * -> pool1 32x14x14
-     * -> conv3 32x14x14
-     * -> conv4 32x14x14
-     * -> pool2 32x7x7
-     * -> flatten 1568
-     * -> 10 logits
-     */
     Tensor a = conv2d(input, m->conv1_w, m->conv1_b, 32, 3, 1, 1);
     relu_tensor(&a);
 
@@ -226,59 +182,41 @@ void model_forward(const CnnModel *m, const Tensor *input, float *logits_out) {
     Tensor p2 = maxpool2d(&d, 2, 2);
     tensor_free(&d);
 
-    int in_features = p2.channels * p2.height * p2.width; /* 32*7*7=1568 */
+    int in_features = p2.channels * p2.height * p2.width; // 1568
     linear(m->fc_w, m->fc_b, p2.data, logits_out, in_features, 10);
-
     tensor_free(&p2);
 }
 
 static int read_floats(FILE *f, float *dst, size_t count, const char *what) {
     size_t n = fread(dst, sizeof(float), count, f);
-
     if (n != count) {
-        fprintf(stderr,
-                "model_load: short read on %s (got %zu of %zu floats)\n",
+        fprintf(stderr, "model_load: short read on %s (got %zu of %zu floats)\n", // checking if it is equal in bitwise
                 what, n, count);
         return -1;
-    }
 
-    return 0;
+    }
+    return 0; // not even nec??
 }
 
 int model_load(CnnModel *m, const char *path) {
     FILE *f = fopen(path, "rb");
-
     if (f == NULL) {
-        fprintf(stderr, "model_load: could not open '%s'\n", path);
+        fprintf(stderr, "model_load: could not open '%s'\n", path); // checking for the model .pth
         return -1;
     }
 
-    if (fseek(f, 0, SEEK_END) != 0) {
-        fclose(f);
-        return -1;
-    }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
+    long size = ftell(f); // looking for the size of our model .pth
+    if (size < 0 || fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
 
-    long file_size = ftell(f);
-
-    if (file_size < 0 || fseek(f, 0, SEEK_SET) != 0) {
-        fclose(f);
-        return -1;
-    }
-
-    /*
-     * The current raw model format has no header. Therefore the file size is
-     * our first compatibility check. A future versioned format should replace
-     * this with explicit magic/version/shape validation.
-     */
-    if ((unsigned long)file_size != sizeof(CnnModel)) {
-        fprintf(stderr, "model_load: '%s' is %ld bytes, expected %zu\n",
-                path, file_size, sizeof(CnnModel));
+    if ((unsigned long)size != sizeof(CnnModel)) {
+        fprintf(stderr, "model_load: '%s' is %ld bytes, expected %zu\n",  // checking if size is not matching (bitwise)
+                path, size, sizeof(CnnModel));
         fclose(f);
         return -1;
     }
 
     int err = 0;
-
     err |= read_floats(f, m->conv1_w,
                        sizeof m->conv1_w / sizeof m->conv1_w[0], "conv1_w");
     err |= read_floats(f, m->conv1_b,
@@ -286,7 +224,7 @@ int model_load(CnnModel *m, const char *path) {
     err |= read_floats(f, m->conv2_w,
                        sizeof m->conv2_w / sizeof m->conv2_w[0], "conv2_w");
     err |= read_floats(f, m->conv2_b,
-                       sizeof m->conv2_b / sizeof m->conv2_b[0], "conv2_b");
+                       sizeof m->conv2_b / sizeof m->conv2_b[0], "conv2_b");  //reading the floats and checking for non matching bits
     err |= read_floats(f, m->conv3_w,
                        sizeof m->conv3_w / sizeof m->conv3_w[0], "conv3_w");
     err |= read_floats(f, m->conv3_b,
