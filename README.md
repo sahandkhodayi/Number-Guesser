@@ -1,4 +1,3 @@
-
 # Number Guesser
 
 A from-scratch learning project connecting machine learning, C systems programming, computer vision, and deployment.
@@ -39,41 +38,57 @@ The project trains a CNN on MNIST with PyTorch, exports the learned weights into
 
 ## Repository
 
-    python/      PyTorch training/evaluation/export
-    c/           native C inference + Raylib application
-    benchmark/   Python↔C comparison/benchmark tooling
-    models/      exported model artifacts
-    tests/       automated tests to be expanded
-    fullguide.md living project textbook and roadmap
+    python/                 PyTorch training/evaluation/export
+    c/                      native C inference + Raylib application
+    benchmark/              Python↔C comparison/benchmark tooling
+    models/                 exported model artifacts
+    tests/                  automated tests to be expanded
+    fullguide.md            next-stage project guide
+    foundations-reference.md completed implementation reference
 
-## The important part
+## Important: the project is already built
 
-This is intentionally not just a model-training project.
+The current project already has the core CNN and C inference implementation:
 
-The long-term goal is to understand:
+- Tensor storage and indexing
+- Linear
+- ReLU
+- Conv2D
+- MaxPool2D
+- model loading
+- full C forward pass
+- Raylib drawing UI
+- drawing preprocessing
+- PyTorch training
+- model export
+- evaluation
+- Python/C intermediate-tensor benchmark
 
-- neural-network mathematics
-- tensor shapes and memory layout
-- C pointers and ownership
-- convolution implementation
-- binary model serialization
-- numerical parity between two implementations
-- testing and sanitizers
-- image preprocessing
-- ML evaluation and error analysis
-- performance profiling
-- multi-digit recognition
-- OCR and sequence modeling
+These are not fake future checklist items. They are existing foundations.
 
 ## Project guide
 
-Read [fullguide.md](fullguide.md) as the main learning material.
+**Start with [fullguide.md](fullguide.md).**
 
-It is kept synchronized with the actual repository state. Completed implementation work is treated as material to understand and verify rather than as a fake future checklist.
+The main guide now assumes the completed foundations above and focuses on the next engineering stages:
+
+1. automatic Python↔C numerical parity
+2. C unit tests
+3. sanitizers and memory correctness
+4. robust model serialization
+5. preprocessing tests
+6. personal handwriting evaluation
+7. error analysis
+8. controlled experiments
+9. C performance profiling
+10. architecture improvements
+11. multi-digit recognition and OCR
+
+If you need the old beginner-oriented code explanations, use [foundations-reference.md](foundations-reference.md). You do not need to read that document from the beginning again.
 
 ## Current next milestone
 
-The next major engineering task is automatic Python↔C numerical parity:
+The next task is automatic Python↔C numerical parity:
 
 1. feed exactly the same input to PyTorch and C
 2. dump corresponding intermediate tensors
@@ -81,25 +96,10 @@ The next major engineering task is automatic Python↔C numerical parity:
 4. find the first divergent layer
 5. fail the test when the difference exceeds tolerance
 
-After that, the project moves into a real C test suite, sanitizers, personal handwriting evaluation, preprocessing experiments, and eventually multi-digit OCR.
+Then move to the C test suite and sanitizers.
 
 ## Philosophy
 
 > Do not claim something is correct because it runs. Measure it, test it, and understand why.
 
 This repository is a laboratory for learning, not a collection of code to copy.
-
-
-## Full project guide
-
-**Start with [fullguide.md](fullguide.md).** It is the complete coding textbook for this repository.
-
-For each major source file it is organized as:
-
-1. what the file is for
-2. the actual project code
-3. line-by-line explanation
-4. how it connects to the rest of the system
-5. what to test and what to build next
-
-The guide intentionally keeps completed code. Completed parts are there to be understood, tested, and used as the foundation for the next features.
