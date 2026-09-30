@@ -88,3 +88,18 @@ After that, the project moves into a real C test suite, sanitizers, personal han
 > Do not claim something is correct because it runs. Measure it, test it, and understand why.
 
 This repository is a laboratory for learning, not a collection of code to copy.
+
+
+## Full project guide
+
+**Start with [fullguide.md](fullguide.md).** It is the complete coding textbook for this repository.
+
+For each major source file it is organized as:
+
+1. what the file is for
+2. the actual project code
+3. line-by-line explanation
+4. how it connects to the rest of the system
+5. what to test and what to build next
+
+The guide intentionally keeps completed code. Completed parts are there to be understood, tested, and used as the foundation for the next features.
