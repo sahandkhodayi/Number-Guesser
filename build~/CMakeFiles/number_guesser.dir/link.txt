@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/number_guesser.dir/c/src/main.c.o CMakeFiles/number_guesser.dir/c/src/nn.c.o CMakeFiles/number_guesser.dir/c/src/ui.c.o -o number_guesser  /usr/lib/libraylib.so -lm 

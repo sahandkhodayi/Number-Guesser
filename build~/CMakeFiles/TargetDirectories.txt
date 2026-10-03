@@ -1,0 +1,3 @@
+/mnt/c/Users/pc/Desktop/code/github/Number-Guesser/build~/CMakeFiles/number_guesser.dir
+/mnt/c/Users/pc/Desktop/code/github/Number-Guesser/build~/CMakeFiles/edit_cache.dir
+/mnt/c/Users/pc/Desktop/code/github/Number-Guesser/build~/CMakeFiles/rebuild_cache.dir
