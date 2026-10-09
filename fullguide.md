@@ -1,524 +1,227 @@
-# Number Guesser — Next-Stage Project Guide
+# Number-Guesser — Code-First Project Textbook
 
-> **This is the guide you read from now.**
->
-> You already built the first version of Number Guesser. This document does NOT teach C, Python, tensors, Conv2D, ReLU, MaxPool, or CNNs from zero again.
->
-> The existing implementation is the foundation. The goal now is to turn the working project into a measured, tested, debuggable, robust, and progressively more capable ML/C system.
+This guide continues the existing project. It is not a beginner introduction to C, Python, tensors, CNNs, or PyTorch. The goal is to add real engineering depth to the implementation you already have.
 
----
+Every chapter follows the same structure:
 
-# 0. READ THIS FIRST
+1. **Goal** — what we are building.
+2. **Why** — the problem it solves in this project.
+3. **Files** — what to open and change.
+4. **Code** — implementation, not just an instruction to “write a test”.
+5. **Explanation** — how the code works and why important decisions matter.
+6. **Run** — exact commands and expected behavior.
+7. **Debugging** — how to diagnose common failures.
+8. **Done means** — objective criteria for moving on.
 
-## Your current state
-
-The repository already contains:
-
-- PyTorch MNIST training
-- the CNN architecture
-- C Tensor storage
-- C Linear
-- C ReLU
-- C Conv2D
-- C MaxPool2D
-- C model loading
-- C forward pass
-- C argmax
-- Raylib drawing
-- drawing → MNIST preprocessing
-- Python model export
-- Python evaluation
-- Python/C intermediate-tensor benchmark tooling
-- a working weights.bin
-- an existing C/PyTorch comparison program
-
-So these are NOT future chapters.
-
-You are not starting another beginner CNN tutorial.
-
-## What you should do now
-
-Follow this order:
-
-~~~text
-CURRENT PROJECT
-      ↓
-1. Make Python ↔ C parity automatic
-      ↓
-2. Build a real C unit-test suite
-      ↓
-3. Add sanitizers + memory correctness
-      ↓
-4. Make model serialization/versioning robust
-      ↓
-5. Build serious preprocessing tests
-      ↓
-6. Evaluate real handwriting instead of only MNIST
-      ↓
-7. Analyze failures and improve the pipeline
-      ↓
-8. Profile and optimize C inference
-      ↓
-9. Improve the application architecture
-      ↓
-10. Move from single-digit recognition toward OCR
-~~~
-
-**Do not jump ahead.**
-
-Each chapter ends with a concrete definition of done.
+Code blocks marked **complete code** are intended to be usable implementations. If a block is marked **structure only**, it is deliberately not a complete source file.
 
 ---
 
-# 1. PROJECT STATUS MAP
+# 0. Where the project stands
 
-| Area | Current state | What to do |
-|---|---|---|
-| Tensor | DONE | Reference only |
-| Linear | DONE | Reference only |
-| ReLU | DONE | Reference only |
-| Conv2D | DONE | Reference only |
-| MaxPool | DONE | Reference only |
-| CNN architecture | DONE | Reference only |
-| Forward pass | DONE | Reference only |
-| Model export | DONE | Improve later |
-| Model loading | DONE | Harden later |
-| Raylib UI | DONE | Improve later |
-| MNIST training | DONE | Improve later |
-| Evaluation | DONE | Expand later |
-| Python/C benchmark | STARTED | **DO NOW** |
-| Automated tests | NOT BUILT | **DO NOW** |
-| Sanitizers | NOT BUILT | Next |
-| Model format | Basic raw binary | Later |
-| Handwriting dataset | NOT BUILT | Later |
-| Error analysis | Basic | Later |
-| Performance profiling | NOT BUILT | Later |
-| Multi-digit OCR | NOT BUILT | Much later |
+The repository already includes:
 
----
+- PyTorch MNIST training, evaluation, and model export.
+- C tensor storage and indexing.
+- C Linear, ReLU, Conv2D, MaxPool2D, model loading, and model forward pass.
+- A Raylib drawing UI and drawing-to-28×28 preprocessing.
+- Python/C intermediate-tensor benchmark scripts.
+- The exported model used by C inference.
 
-# 2. THE RULE FOR THIS GUIDE
+Do not rebuild those features from scratch. We are improving reliability, testing, evaluation, and then capability.
 
-Every new chapter follows the same pattern:
+## The parity milestone is already working
 
-1. What problem are we solving?
-2. Why does the project need it?
-3. What is already present?
-4. What are we going to change?
-5. Exact code to write
-6. Explain the new code
-7. Run it
-8. Break it intentionally
-9. Test it
-10. Definition of done
-11. Only then move on
+The latest comparison had an exact input match and a maximum difference of approximately 7.63e-6 at the logits. That is excellent numerical agreement for the benchmark input. It proves the two forward passes agree closely on this case; it does not prove memory safety or correctness for every possible input.
 
-You do not need to memorize every line before continuing.
+## Roadmap
 
-The important loop is:
-
-~~~text
-understand
-   ↓
-implement
-   ↓
-run
-   ↓
-observe
-   ↓
-test
-   ↓
-debug
-   ↓
-measure
-~~~
+1. Make Python/C parity a one-command regression test.
+2. Add C unit tests for individual primitives.
+3. Run the tests under memory/undefined-behavior sanitizers.
+4. Give the exported model file a validated format.
+5. Test preprocessing independently of the CNN.
+6. Evaluate a held-out personal-handwriting dataset.
+7. Save and classify wrong predictions.
+8. Run controlled experiments.
+9. Measure and optimize C inference.
+10. Refactor application responsibilities when the tests make it safe.
+11. Extend single-digit recognition toward multi-digit input.
 
 ---
 
-# 3. CHAPTER 1 — MAKE PYTHON ↔ C PARITY AUTOMATIC
+# Chapter 1 — Automate Python/C numerical parity
 
-## Status
+## Goal
 
-**🟡 TOOLING ALREADY EXISTS — YOUR JOB IS TO FINISH IT**
+Turn the benchmark you just ran manually into a test that runs both implementations and fails if any intermediate stage differs too much.
 
-This is the chapter you should start with.
+## Why
 
-You already have:
+A table that a human reads is useful for debugging, but a later code change can break a layer and go unnoticed. A regression test makes numerical agreement an executable contract.
+
+The current pipeline already exists in:
 
 - benchmark/run_pytorch.py
 - benchmark/c_benchmark.c
 - benchmark/compare.py
 
-The project can already dump intermediate tensors.
+We will add a runner that regenerates the tensors, compiles C, executes the C benchmark, and compares all stages.
 
-The missing step is turning that into a reliable automated verification system.
-
----
-
-# 4. THE PARITY PROBLEM
-
-Right now, it is possible for this to happen:
-
-~~~text
-PyTorch model works
-       ↓
-C model compiles
-       ↓
-C model predicts something
-       ↓
-you think everything is correct
-       ↓
-one layer is actually numerically wrong
-~~~
-
-A prediction matching by coincidence is not proof.
-
-We want:
-
-~~~text
-same input
-   ↓
-PyTorch ───────── C
-   ↓                ↓
-conv1             conv1
-   ↓                ↓
-relu1             relu1
-   ↓                ↓
-...
-   ↓                ↓
-logits            logits
-~~~
-
-Then compare every stage.
-
----
-
-# 5. UNDERSTAND THE PARITY CONTRACT
-
-The two implementations must agree on:
-
-### Input
-
-~~~text
-1 × 28 × 28
-float32
-channel-first
-same pixel values
-~~~
-
-### Weight ordering
-
-~~~text
-conv1 weights
-conv1 bias
-conv2 weights
-conv2 bias
-conv3 weights
-conv3 bias
-conv4 weights
-conv4 bias
-linear weights
-linear bias
-~~~
-
-### Tensor ordering
-
-C uses:
-
-~~~text
-((channel * height) + y) * width + x
-~~~
-
-Python/PyTorch tensors must be exported consistently with that layout.
-
-### Operation ordering
-
-~~~text
-Conv1
-ReLU
-Conv2
-ReLU
-Pool1
-Conv3
-ReLU
-Conv4
-ReLU
-Pool2
-Flatten
-Linear
-~~~
-
-If any one of these contracts changes, parity can fail.
-
----
-
-# 6. FIRST TASK — RUN THE EXISTING PARITY PIPELINE
-
-Before changing code, run the existing tools.
-
-Conceptually:
-
-~~~bash
-python benchmark/run_pytorch.py
-~~~
-
-Then build/run the C benchmark.
-
-Then:
-
-~~~bash
-python benchmark/compare.py
-~~~
-
-Your first goal is NOT to improve the model.
-
-Your goal is to answer:
-
-> Do the two implementations currently agree?
-
----
-
-# 7. HOW TO READ A PARITY FAILURE
-
-Suppose you get:
-
-~~~text
-Stage                 max_abs_diff
-input                 0
-conv1                 0.000001
-relu1                 0.000001
-conv2                 0.000002
-relu2                 0.000002
-pool1                 0.000002
-conv3                 0.81
-relu3                 0.82
-...
-~~~
-
-Do NOT debug relu3.
-
-The first meaningful failure is:
-
-~~~text
-conv3
-~~~
-
-Therefore investigate:
-
-- conv3 weight ordering
-- input tensor shape
-- C convolution indexing
-- padding
-- stride
-- bias
-- exported weights
-
-The key debugging idea:
-
-> **Find the first divergence, not the final symptom.**
-
----
-
-# 8. TURN THE COMPARISON INTO A REAL TEST
-
-Create:
-
-~~~text
-tests/
-    test_parity.py
-~~~
-
-The test should:
-
-1. generate/reference deterministic input
-2. run both implementations
-3. compare every stage
-4. use a defined tolerance
-5. return a non-zero exit code when a stage fails
-
-Basic comparison logic:
+## Code — create tests/test_parity.py
 
 ~~~python
+from pathlib import Path
+import subprocess
+import sys
+
 import numpy as np
 
-def assert_close(name, expected, actual, atol=1e-4):
+ROOT = Path(__file__).resolve().parents[1]
+BENCHMARK = ROOT / "benchmark"
+STAGES = [
+    "input",
+    "conv1", "relu1",
+    "conv2", "relu2",
+    "pool1",
+    "conv3", "relu3",
+    "conv4", "relu4",
+    "pool2",
+    "logits",
+]
+ATOL = 1e-4
+
+
+def run(command: list[str]) -> None:
+    print("+", " ".join(command))
+    subprocess.run(command, cwd=ROOT, check=True)
+
+
+def load_floats(path: Path) -> np.ndarray:
+    if not path.is_file():
+        raise AssertionError(f"Missing benchmark output: {path}")
+    values = np.fromfile(path, dtype=np.float32)
+    if values.size == 0:
+        raise AssertionError(f"Empty benchmark output: {path}")
+    if not np.isfinite(values).all():
+        raise AssertionError(f"NaN or infinity in {path}")
+    return values
+
+
+def compare_stage(stage: str) -> None:
+    expected = load_floats(BENCHMARK / f"pytorch_{stage}.bin")
+    actual = load_floats(BENCHMARK / f"c_{stage}.bin")
+
     if expected.shape != actual.shape:
         raise AssertionError(
-            f"{name}: shape mismatch: "
-            f"{expected.shape} != {actual.shape}"
+            f"{stage}: element-count mismatch: "
+            f"Python={expected.shape}, C={actual.shape}"
         )
 
     diff = np.abs(expected - actual)
-    max_diff = float(diff.max())
+    worst = int(np.argmax(diff))
+    maximum = float(diff[worst])
+    mean = float(diff.mean())
 
-    if max_diff > atol:
+    print(
+        f"{stage:8} max={maximum:.8g} "
+        f"mean={mean:.8g} worst_index={worst}"
+    )
+
+    if maximum > ATOL:
         raise AssertionError(
-            f"{name}: max difference {max_diff} > {atol}"
+            f"{stage}: max difference {maximum:.8g} exceeds {ATOL}; "
+            f"Python={expected[worst]}, C={actual[worst]}"
         )
+
+
+def main() -> None:
+    # Regenerate reference tensors from the current model checkpoint.
+    run([sys.executable, "benchmark/run_pytorch.py"])
+
+    # Build the C benchmark from the current source.
+    executable = BENCHMARK / "c_benchmark.exe"
+    run([
+        "gcc", "-std=c11", "-Wall", "-Wextra", "-Wpedantic",
+        "benchmark/c_benchmark.c", "c/src/nn.c",
+        "-o", str(executable), "-lm",
+    ])
+
+    # C reads benchmark/pytorch_input.bin, the exact Python input.
+    run([str(executable)])
+
+    print(f"\nComparing all stages with absolute tolerance {ATOL:g}")
+    for stage in STAGES:
+        compare_stage(stage)
+
+    print("\nPARITY PASS: every stage is within tolerance.")
+
+
+if __name__ == "__main__":
+    main()
 ~~~
 
-## What is new here?
+## Explanation
 
-You already know NumPy.
+- ROOT is computed from the script path, so the test does not rely on the terminal's current directory.
+- subprocess.run with check=True stops if training files are missing, compilation fails, or the C program exits unsuccessfully.
+- The file loader refuses missing, empty, or non-finite tensors. Without these checks, a missing output can be mistaken for a numerical result.
+- The comparison checks element counts before comparing values.
+- The test prints the maximum difference, mean difference, and worst element index. The worst index gives us a place to start investigating if a layer diverges.
+- ATOL is an explicit tolerance. Do not increase it just to hide a bug.
 
-The new concept is **turning numerical correctness into an executable contract**.
+### Platform note
 
-Instead of:
+This command assumes GCC is on PATH and creates a Windows executable. In WSL/Linux, name the output c_benchmark and run that executable instead. The compile output path and run path must agree.
 
-> "I looked at the numbers and they seem fine."
+## Run
 
-you get:
+From the repository root in Windows PowerShell:
 
-> "The program refuses to pass if Conv3 differs beyond tolerance."
+~~~powershell
+python tests/test_parity.py
+~~~
 
----
+## Expected result
 
-# 9. TOLERANCE IS NOT "MAKE IT PASS"
-
-Do not solve failures by changing:
+Each stage should show a small difference and the final line should be:
 
 ~~~text
-1e-4
-→
-1e-1
-→
-1
+PARITY PASS: every stage is within tolerance.
 ~~~
 
-until the test passes.
+## Debugging
 
-The tolerance represents expected floating-point differences.
+- **Could not open input:** check that Python creates benchmark/pytorch_input.bin and that C reads that exact path.
+- **Missing stage file:** make sure the C benchmark writes every stage and check its working directory.
+- **Large difference at conv1:** check exported weights and model freshness first.
+- **Input difference is nonzero:** stop there; downstream comparisons are not useful until the input is identical.
+- **Only a later stage diverges:** debug the first bad stage, not the final logits.
 
-If C and PyTorch perform mathematically equivalent float32 operations, tiny differences are normal.
+## Done means
 
-A large difference is evidence of a bug.
-
-Record:
-
-- max absolute difference
-- mean absolute difference
-- tensor shape
-- first failing stage
-
-Later we can add relative error and worst-index reporting.
+- [ ] One command runs both implementations.
+- [ ] Missing files and failed commands stop the test.
+- [ ] Shape/count mismatch and numerical mismatch stop the test.
+- [ ] Current parity passes.
+- [ ] Deliberately corrupting a value causes a failure.
+- [ ] Reverting the corruption makes it pass again.
 
 ---
 
-# 10. MAKE THE FAILURE USEFUL
+# Chapter 2 — Build a real C unit-test suite
 
-Upgrade the failure message.
+## Goal
 
-Target output:
+Test individual functions with tiny inputs whose correct answers are known.
 
-~~~text
-PARITY FAILURE
+## Why
 
-Stage: conv3
-Expected shape: (32, 7, 7)
-Actual shape:   (32, 7, 7)
+Parity tests tell us whether the full C model agrees with PyTorch for a particular input. Unit tests isolate primitives. If the full network breaks, a small test can tell us whether the problem is tensor indexing, ReLU, Linear, or pooling.
 
-max abs diff:   0.83241
-mean abs diff:  0.09124
+The declarations already exist in c/include/nn.h. We are testing those functions, not rewriting them.
 
-Worst element:
-channel = 17
-y       = 3
-x       = 5
-
-Expected: 1.23891
-Actual:   0.40650
-~~~
-
-This turns the benchmark from a demo into a debugging tool.
-
----
-
-# 11. CHAPTER 1 — DEFINITION OF DONE
-
-- [ ] Python reference tensors are deterministic
-- [ ] C tensors are dumped at the same stages
-- [ ] comparison checks every stage
-- [ ] shape mismatches fail
-- [ ] numerical mismatches fail
-- [ ] the first bad stage is reported
-- [ ] tolerance is explicitly documented
-- [ ] a successful run has a clear PASS message
-- [ ] intentionally corrupting one value makes the test fail
-
-### Deliberate bug
-
-Temporarily change one C value:
-
-~~~c
-sum += 100.0f;
-~~~
-
-Run parity.
-
-It MUST fail.
-
-Undo the change.
-
-Run again.
-
-It MUST pass.
-
-That is your first real regression test.
-
----
-
-# 12. CHAPTER 2 — BUILD A REAL C UNIT TEST SUITE
-
-## Status
-
-**🔴 NOT BUILT**
-
-The repository currently has tests/.gitkeep.
-
-That means the project has a place for tests but not an actual test suite.
-
-Now we build one.
-
----
-
-# 13. WHY PARITY IS NOT ENOUGH
-
-Parity tests answer:
-
-> Does our implementation match PyTorch?
-
-Unit tests answer:
-
-> Does this individual function behave correctly?
-
-For example:
-
-~~~text
-tensor_get()
-tensor_set()
-relu()
-argmax()
-linear()
-conv2d()
-maxpool2d()
-model_load()
-~~~
-
-A parity failure tells you something is wrong.
-
-A unit test can tell you **which primitive is broken**.
-
----
-
-# 14. FIRST C TEST — ARGMAX
-
-Create:
-
-~~~text
-tests/test_nn.c
-~~~
-
-Start with tiny deterministic tests.
+## Code — create tests/test_nn.c
 
 ~~~c
 #include "../c/include/nn.h"
@@ -527,1399 +230,715 @@ Start with tiny deterministic tests.
 #include <math.h>
 #include <stdio.h>
 
+static void test_tensor_set_get(void) {
+    Tensor t = tensor_alloc(2, 3, 4);
+    assert(t.data != NULL);
+
+    tensor_set(&t, 1, 2, 3, 42.5f);
+    assert(fabsf(tensor_get(&t, 1, 2, 3) - 42.5f) < 1e-6f);
+
+    /* A separate channel must not overwrite this element. */
+    assert(tensor_get(&t, 0, 2, 3) == 0.0f);
+
+    tensor_free(&t);
+    assert(t.data == NULL);
+    assert(t.channels == 0);
+    assert(t.height == 0);
+    assert(t.width == 0);
+}
+
+static void test_relu(void) {
+    float values[] = {-3.0f, 0.0f, 2.5f, -0.25f};
+    relu(values, 4);
+
+    assert(values[0] == 0.0f);
+    assert(values[1] == 0.0f);
+    assert(values[2] == 2.5f);
+    assert(values[3] == 0.0f);
+}
+
 static void test_argmax(void) {
-    float x[] = {1.0f, 7.0f, 3.0f, 2.0f};
+    float values[] = {-2.0f, 0.5f, 9.0f, 3.0f};
+    assert(argmax(values, 4) == 2);
+}
 
-    int result = argmax(x, 4);
+static void test_linear(void) {
+    /*
+       W = [1 2]    b = [10]    x = [5]
+           [3 4]        [20]        [6]
 
-    assert(result == 1);
+       y0 = 1*5 + 2*6 + 10 = 27
+       y1 = 3*5 + 4*6 + 20 = 59
+    */
+    const float W[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    const float b[] = {10.0f, 20.0f};
+    const float x[] = {5.0f, 6.0f};
+    float y[2] = {0.0f, 0.0f};
+
+    linear(W, b, x, y, 2, 2);
+
+    assert(fabsf(y[0] - 27.0f) < 1e-6f);
+    assert(fabsf(y[1] - 59.0f) < 1e-6f);
+}
+
+static void test_maxpool(void) {
+    Tensor input = tensor_alloc(1, 4, 4);
+    const float values[16] = {
+        1, 8, 2, 4,
+        3, 5, 7, 6,
+        9, 0, 1, 2,
+        4, 3, 8, 5
+    };
+
+    for (int y = 0; y < 4; ++y) {
+        for (int x = 0; x < 4; ++x) {
+            tensor_set(&input, 0, y, x, values[y * 4 + x]);
+        }
+    }
+
+    Tensor output = maxpool2d(&input, 2, 2);
+    assert(output.data != NULL);
+    assert(output.channels == 1);
+    assert(output.height == 2);
+    assert(output.width == 2);
+
+    assert(tensor_get(&output, 0, 0, 0) == 8.0f);
+    assert(tensor_get(&output, 0, 0, 1) == 7.0f);
+    assert(tensor_get(&output, 0, 1, 0) == 9.0f);
+    assert(tensor_get(&output, 0, 1, 1) == 8.0f);
+
+    tensor_free(&output);
+    tensor_free(&input);
 }
 
 int main(void) {
+    test_tensor_set_get();
+    test_relu();
     test_argmax();
+    test_linear();
+    test_maxpool();
 
-    printf("All tests passed.\\n");
+    puts("All C unit tests passed.");
     return 0;
 }
 ~~~
 
----
+## Explanation
 
-# 15. WHY THIS TEST MATTERS
+### Tensor indexing
 
-The test has three parts:
+The test writes one location and reads it back. It also checks a corresponding location in another channel. This catches indexing errors that can be hidden by a final classification result.
 
-~~~text
-Arrange
-   ↓
-Act
-   ↓
-Assert
-~~~
+### ReLU
 
-Arrange:
+The test covers negative, zero, and positive values. These are the three important behavioral cases for this function.
 
-~~~c
-float x[] = {1.0f, 7.0f, 3.0f, 2.0f};
-~~~
+### Linear
 
-Act:
+The expected answers are calculated by hand. This is important: the test should not call the same implementation or depend on PyTorch to calculate the expected result.
 
-~~~c
-int result = argmax(x, 4);
-~~~
+### MaxPool
 
-Assert:
-
-~~~c
-assert(result == 1);
-~~~
-
-This pattern will be used throughout the test suite.
-
----
-
-# 16. TESTS TO ADD IN ORDER
-
-Do not write 100 tests at once.
-
-Build them in this order.
-
-## Tensor tests
-
-~~~text
-allocation dimensions
-allocation initializes memory
-set/get round trip
-different channels do not overlap
-free resets the tensor
-~~~
-
-## Math tests
-
-~~~text
-ReLU positive
-ReLU negative
-ReLU zero
-argmax first element
-argmax middle element
-argmax last element
-~~~
-
-## Linear tests
-
-Use tiny hand-calculated values.
-
-~~~text
-W = [1 2
-     3 4]
-
-b = [10
-     20]
-
-x = [5
-     6]
-~~~
-
-Expected:
-
-~~~text
-y0 = 1*5 + 2*6 + 10 = 27
-y1 = 3*5 + 4*6 + 20 = 59
-~~~
-
-Then assert:
-
-~~~c
-assert(fabsf(y[0] - 27.0f) < 1e-6f);
-assert(fabsf(y[1] - 59.0f) < 1e-6f);
-~~~
-
-This is more useful than testing only the final CNN.
-
----
-
-# 17. CONV2D UNIT TEST
-
-You already implemented Conv2D.
-
-**Do not rewrite Conv2D.**
-
-Now test it with a tiny tensor.
-
-Input:
-
-~~~text
-1 channel
-3 × 3
-
-1 2 3
-4 5 6
-7 8 9
-~~~
-
-Kernel:
-
-~~~text
-1 0
-0 1
-~~~
-
-Expected output:
-
-~~~text
-6 8
-12 14
-~~~
-
-First window:
-
-~~~text
-1*1 + 2*0
-4*0 + 5*1
-= 6
-~~~
-
-The lesson is creating **small problems whose correct answer you can calculate yourself**.
-
----
-
-# 18. MAXPOOL TEST
-
-Input:
-
-~~~text
-1 8 2 4
-3 5 7 6
-9 0 1 2
-4 3 8 5
-~~~
-
-For:
-
-~~~text
-kernel = 2
-stride = 2
-~~~
-
-Expected:
+Each output is the maximum of one non-overlapping 2×2 window. The expected output is:
 
 ~~~text
 8 7
 9 8
 ~~~
 
-Test exactly that.
+We check the dimensions as well as the values. A function that returns correct values in an incorrectly shaped tensor is still broken.
 
----
+### Conv2D comes next
 
-# 19. MEMORY TESTS
+Conv2D needs a hand-calculated test after confirming the implementation's exact weight layout, padding, and output-shape behavior. Do not paste a guessed kernel test: the expected answer must match the real function contract. Chapter 1 already gives us a full-network comparison, but a tiny hand-calculated Conv2D test will make future debugging more local.
 
-Now test ownership.
+## Run
 
-Test:
-
-~~~c
-Tensor t = tensor_alloc(...);
-
-assert(t.data != NULL);
-
-tensor_free(&t);
-
-assert(t.data == NULL);
-assert(t.channels == 0);
-assert(t.height == 0);
-assert(t.width == 0);
+~~~powershell
+gcc -std=c11 -Wall -Wextra -Wpedantic tests/test_nn.c c/src/nn.c -o tests/test_nn.exe -lm
+.\tests\test_nn.exe
 ~~~
 
-You are no longer only testing ML mathematics.
-
-You are testing whether your C program manages memory correctly.
-
----
-
-# 20. CHAPTER 2 — DEFINITION OF DONE
-
-- [ ] test executable exists
-- [ ] tensor tests exist
-- [ ] ReLU test exists
-- [ ] argmax test exists
-- [ ] Linear test exists
-- [ ] Conv2D test exists
-- [ ] MaxPool test exists
-- [ ] memory cleanup is tested
-- [ ] one intentional bug causes a test failure
-- [ ] tests can be run with one command
-
----
-
-# 21. CHAPTER 3 — SANITIZERS AND MEMORY CORRECTNESS
-
-## Status
-
-**🔴 NEW**
-
-Once unit tests exist, run them with tools that look for C memory bugs.
-
-Important tools:
+Expected output:
 
 ~~~text
-AddressSanitizer
-UndefinedBehaviorSanitizer
+All C unit tests passed.
 ~~~
 
-For GCC/Clang, conceptually:
+## Debugging
 
-~~~text
--fsanitize=address,undefined
--g
--O1
-~~~
+- **Undefined reference:** compile tests/test_nn.c together with c/src/nn.c.
+- **Header not found:** run from the repository root and check the relative include.
+- **A test fails:** debug that primitive with the tiny values before changing the CNN.
+- **Allocation fails:** inspect tensor_alloc and its initialization/cleanup behavior.
 
-Do not memorize the flags.
+## Done means
 
-Understand what they provide.
+- [ ] The C test executable compiles with warnings enabled.
+- [ ] Tensor, ReLU, argmax, Linear, and MaxPool tests pass.
+- [ ] Changing an expected value makes a test fail.
+- [ ] A hand-calculated Conv2D test is added after its layout contract is confirmed.
 
 ---
 
-# 22. WHY SANITIZERS COME AFTER TESTS
+# Chapter 3 — Detect memory errors with sanitizers
 
-A sanitizer without meaningful tests may never execute the broken path.
+## Goal
 
-You want:
+Run the C tests with tools that detect common memory violations and undefined behavior.
 
-~~~text
-unit test
-   ↓
-execute code
-   ↓
-sanitizer observes memory
-   ↓
-bug reported
+## Why
+
+A C function can return the correct answer once and still access memory outside an allocation, use a freed pointer, or rely on undefined behavior. Numerical parity does not prove memory safety.
+
+## Code — build a separate sanitizer executable
+
+On a GCC environment with AddressSanitizer support:
+
+~~~bash
+gcc -std=c11 -Wall -Wextra -Wpedantic -g -O1 \
+    -fsanitize=address,undefined \
+    tests/test_nn.c c/src/nn.c \
+    -o tests/test_nn_sanitized -lm
 ~~~
 
-Possible bugs:
+Run:
 
-- reading outside a tensor
-- writing outside an array
-- use-after-free
-- double free
-- invalid pointer usage
-- undefined behavior
+~~~bash
+./tests/test_nn_sanitized
+~~~
+
+Keep this as a separate executable so the ordinary build remains available.
+
+## Explanation
+
+- **-g** includes debug symbols for source locations.
+- **-O1** provides modest optimization while retaining useful diagnostics.
+- **-fsanitize=address,undefined** instruments the program to detect supported classes of invalid memory use and undefined behavior.
+- A clean run only means the paths exercised by these tests did not trigger a report. It is not a proof that every possible input is safe.
+
+On Windows, sanitizer support depends on the compiler distribution. If your MinGW GCC does not support AddressSanitizer, use WSL GCC or a supported Clang build. A compiler-flag error is an environment limitation, not evidence that your program has a memory bug.
+
+## Debugging
+
+When a sanitizer reports an error, identify the first relevant source location, determine which allocation/index is invalid, fix the cause, and rerun all tests. Do not suppress the report simply to get a clean run.
+
+## Done means
+
+- [ ] Normal C tests pass.
+- [ ] A sanitizer build works in a supported environment.
+- [ ] All tests pass under the sanitizer.
+- [ ] Any reported source location is understood and fixed.
 
 ---
 
-# 23. INTENTIONALLY BREAK THE PROGRAM
+# Chapter 4 — Give the model file a real format
 
-Create a temporary test bug.
+## Goal
 
-For example, deliberately access one element outside the allocated tensor.
+Make the exported model identify itself and let C reject incompatible or corrupted files.
 
-Run the sanitizer build.
+## Why
 
-Observe the report.
+Python creates the weights and C consumes them. The file is an interface between two programs. A raw sequence of floats does not describe which architecture it belongs to or which format version it uses. If the model architecture changes, the loader must not silently read the wrong data.
 
-Then fix it.
+## Code — define the format first
 
-Learn to read:
+Create models/FORMAT.md:
 
-~~~text
-ERROR
-  ↓
-type of memory error
-  ↓
-stack trace
-  ↓
-source line
-  ↓
-root cause
+~~~markdown
+# Number-Guesser model format
+
+## Version 1
+
+- Magic: four ASCII bytes NGNN
+- Version: unsigned 32-bit integer, little-endian
+- Architecture ID: unsigned 32-bit integer
+- Payload length: unsigned 64-bit integer, little-endian
+- Payload: IEEE-754 float32 values, little-endian
+
+Payload order:
+1. conv1 weights
+2. conv1 bias
+3. conv2 weights
+4. conv2 bias
+5. conv3 weights
+6. conv3 bias
+7. conv4 weights
+8. conv4 bias
+9. fully connected weights
+10. fully connected bias
+
+The loader rejects an unknown magic, unsupported version,
+unknown architecture ID, wrong payload length, or truncated file.
 ~~~
+
+## Explanation
+
+The specification comes first so the Python exporter and C loader implement one agreement. Versioning allows the format to evolve safely. Payload length detects truncated or unexpected files. The architecture ID prevents a file for a different layer shape from being accepted accidentally.
+
+## Implementation order
+
+1. Update python/export.py to write the header followed by the payload.
+2. Update model_load in c/src/nn.c to validate the header before reading weights.
+3. Reject incorrect payload length and truncated files.
+4. Add tests for a valid file, wrong magic, unsupported version, and truncated payload.
+5. Export a fresh model and rerun Chapter 1.
+
+Do not update the exporter and loader separately and leave them incompatible. Treat the format change as one feature spanning Python, C, and tests.
+
+## Done means
+
+- [ ] The format is documented.
+- [ ] Python writes the documented fields and payload order.
+- [ ] C validates the header and exact payload size.
+- [ ] Invalid files fail with a useful error.
+- [ ] A newly exported model passes parity.
 
 ---
 
-# 24. CHAPTER 3 — DEFINITION OF DONE
+# Chapter 5 — Test preprocessing independently of the CNN
 
-- [ ] normal test build works
-- [ ] sanitizer build works
-- [ ] tests pass under sanitizer
-- [ ] you intentionally triggered an error
-- [ ] you can identify the source line from the sanitizer report
-- [ ] no sanitizer errors remain
+## Goal
+
+Inspect the final 28×28 input that the application actually sends into the model.
+
+## Why
+
+The model was trained on MNIST, not arbitrary mouse drawings. Cropping, centering, scaling, interpolation, and intensity conventions can cause bad predictions even when C inference matches PyTorch perfectly. When parity passes but the drawing UI predicts poorly, inspect preprocessing before changing the network.
+
+The existing preprocessing is in c/src/ui.c and includes canvas drawing, bounding-box extraction, crop/margin handling, resizing, and conversion to a 28×28 input.
+
+## Code — create tests/inspect_preprocessed.py
+
+This checker expects a debug dump containing exactly 784 float32 values.
+
+~~~python
+from pathlib import Path
+import sys
+
+import numpy as np
+
+path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("preprocessed.bin")
+image = np.fromfile(path, dtype=np.float32)
+
+if image.size != 28 * 28:
+    raise SystemExit(f"Expected 784 floats, got {image.size}")
+
+if not np.isfinite(image).all():
+    raise SystemExit("Input contains NaN or infinity")
+
+image = image.reshape(28, 28)
+print(f"shape: {image.shape}")
+print(f"min:   {image.min():.6f}")
+print(f"max:   {image.max():.6f}")
+print(f"mean:  {image.mean():.6f}")
+print("ASCII preview (# = bright, + = mid-tone):")
+
+for row in image:
+    print("".join(
+        "#" if value >= 0.5 else "+" if value >= 0.15 else " "
+        for value in row
+    ))
+~~~
+
+## Explanation
+
+The checker does not change the image. It validates the value count, rejects NaN/Inf, prints the intensity range, and gives a rough terminal preview. This helps reveal an empty image, inverted colors, a clipped digit, or a digit placed in the wrong part of the tensor.
+
+The next change in C is to add an optional debug dump immediately after canvas_to_mnist_input has produced the final 784 floats. Do not write a file every frame; make it an explicit debug action.
+
+## Run
+
+~~~powershell
+python tests/inspect_preprocessed.py path\to\preprocessed.bin
+~~~
+
+## Required fixtures
+
+Create deterministic inputs for:
+
+- Empty canvas — expected output is 784 zeros.
+- Centered digit.
+- Digit touching the left or top edge.
+- Very wide digit.
+- Very tall digit.
+- Digit near a corner.
+- Thick and thin strokes.
+
+These should be known pixel inputs, not screenshots affected by window scaling.
+
+## Done means
+
+- [ ] The final tensor can be saved on demand.
+- [ ] Empty canvas produces zeros.
+- [ ] Edge cases stay within bounds.
+- [ ] Aspect ratio is preserved.
+- [ ] Pixel intensity range and foreground/background match training.
+- [ ] The output can be inspected without running the CNN.
 
 ---
 
-# 25. CHAPTER 4 — STOP USING A "MAGIC" RAW MODEL FILE
+# Chapter 6 — Evaluate on personal handwriting
 
-## Status
+## Goal
 
-**🟡 CURRENT IMPLEMENTATION WORKS — DESIGN NEEDS TO MATURE**
+Create a labelled evaluation set that is separate from training data.
 
-Currently weights.bin is basically raw float data in a known order.
+## Why
 
-The C loader knows exactly how many bytes it expects.
+MNIST test accuracy tells you how the model performs on MNIST test images. It does not tell you how it handles your own stroke thickness, slant, spacing, and drawing habits. A held-out dataset gives you evidence about the application you are building.
 
-That works.
-
-But it has a weakness.
-
-What happens if you change the model?
-
----
-
-# 26. THE CURRENT FAILURE MODE
-
-Suppose tomorrow you change:
-
-~~~text
-32 channels
-→
-64 channels
-~~~
-
-The loader and exported model may no longer agree.
-
-A binary file should be able to identify itself.
-
-Eventually move toward:
-
-~~~text
-HEADER
-──────
-magic
-version
-dtype
-architecture ID
-tensor count
-metadata
-──────
-TENSOR DATA
-~~~
-
----
-
-# 27. DESIGN THE FORMAT BEFORE CODING
-
-Do not immediately write a serializer.
-
-First design the contract.
-
-Example:
-
-~~~c
-typedef struct {
-    char magic[4];
-    uint32_t version;
-    uint32_t tensor_count;
-    uint32_t dtype;
-} ModelHeader;
-~~~
-
-Possible magic:
-
-~~~text
-NGNN
-~~~
-
-The exact format can change during this chapter.
-
-The important new concept:
-
-> **A model file is an interface between two programs.**
-
-Python produces it.
-
-C consumes it.
-
-Therefore the format must be explicit.
-
----
-
-# 28. VERSIONING
-
-Imagine:
-
-~~~text
-version 1
-version 2
-version 3
-~~~
-
-The loader should not silently interpret version 3 as version 1.
-
-Instead:
-
-~~~text
-read header
-   ↓
-check magic
-   ↓
-check version
-   ↓
-check architecture
-   ↓
-check file size
-   ↓
-load tensors
-~~~
-
-If anything fails:
-
-~~~text
-clear error
-+
-do not run inference
-~~~
-
----
-
-# 29. CHAPTER 4 — DEFINITION OF DONE
-
-- [ ] model format documented
-- [ ] magic value exists
-- [ ] version exists
-- [ ] architecture/model identifier exists
-- [ ] loader validates the header
-- [ ] corrupted files fail cleanly
-- [ ] unsupported versions fail clearly
-- [ ] exporter and loader agree automatically
-
----
-
-# 30. CHAPTER 5 — TEST THE PREPROCESSING PIPELINE
-
-## Status
-
-**🟡 IMPLEMENTED — NOT SERIOUSLY TESTED**
-
-Your current pipeline is:
-
-~~~text
-280×280 drawing
-      ↓
-find bounding box
-      ↓
-square crop
-      ↓
-margin
-      ↓
-bilinear resize
-      ↓
-20×20
-      ↓
-center in 28×28
-~~~
-
-This is one of the most important parts of the real application.
-
-The model was trained on MNIST.
-
-The user does not draw MNIST.
-
----
-
-# 31. WHY THIS MATTERS
-
-You can have:
-
-~~~text
-excellent MNIST accuracy
-+
-bad user predictions
-~~~
-
-without the CNN being wrong.
-
-The difference is:
-
-~~~text
-training distribution
-        vs
-real input distribution
-~~~
-
-This is a machine-learning engineering problem, not merely a UI problem.
-
----
-
-# 32. CREATE PREPROCESSING TEST INPUTS
-
-You need deterministic cases.
-
-### Test A — empty canvas
-
-Expected:
-
-~~~text
-all zeros
-~~~
-
-### Test B — centered square
-
-Check:
-
-- bounding box
-- output location
-- output size
-
-### Test C — tiny digit in upper-left
-
-Check that the digit becomes centered.
-
-### Test D — digit touching an edge
-
-Check crop bounds.
-
-### Test E — very wide digit
-
-Check aspect-ratio preservation.
-
-### Test F — very tall digit
-
-Same.
-
----
-
-# 33. SAVE PREPROCESSING OUTPUTS
-
-Add a debugging mode that can save:
-
-~~~text
-original 280×280
-bounding box
-crop
-resized 20×20
-final 28×28
-~~~
-
-If the final image looks wrong, debugging the CNN is pointless.
-
----
-
-# 34. CHAPTER 5 — DEFINITION OF DONE
-
-- [ ] empty canvas is tested
-- [ ] edge cases are tested
-- [ ] preprocessing output can be saved
-- [ ] final 28×28 input can be inspected
-- [ ] preprocessing never writes outside bounds
-- [ ] several real handwritten digits produce sensible 28×28 inputs
-
----
-
-# 35. CHAPTER 6 — BUILD A REAL HANDWRITING EVALUATION SET
-
-## Status
-
-**🔴 NEW**
-
-MNIST test accuracy answers:
-
-> How well does the model recognize MNIST test images?
-
-It does NOT answer:
-
-> How well does it recognize my handwriting?
-
-Create a small personal evaluation dataset.
-
-Example:
+## Dataset structure
 
 ~~~text
 my_digits/
-    0/
-    1/
-    2/
-    ...
-    9/
+├── 0/
+├── 1/
+├── 2/
+├── 3/
+├── 4/
+├── 5/
+├── 6/
+├── 7/
+├── 8/
+└── 9/
 ~~~
 
-Start small.
+Start with 20 labelled images per digit if practical. Keep these images out of training while using them to measure generalization.
 
-Even 20 examples per digit gives 200 evaluation images.
+## Code — create python/evaluate_folder.py
+
+This starter evaluator expects image files containing one digit on an MNIST-like background. It does not automatically reproduce the Raylib crop/centering pipeline; for a fair evaluation of the C app, later feed the exact preprocessed 28×28 dumps into the evaluation pipeline too.
+
+~~~python
+from pathlib import Path
+import argparse
+
+import torch
+from PIL import Image
+from torchvision import transforms
+
+from model import _MainModel
+
+ROOT = Path(__file__).resolve().parents[1]
+CHECKPOINT = ROOT / "models" / "number_guesser_model.pth"
+
+transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=1),
+    transforms.Resize((28, 28)),
+    transforms.ToTensor(),
+])
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("dataset", type=Path)
+    args = parser.parse_args()
+
+    model = _MainModel(input_shape=1, hidden_units=32, output_shape=10)
+    model.load_state_dict(torch.load(CHECKPOINT, map_location="cpu"))
+    model.eval()
+
+    total = 0
+    correct = 0
+    per_digit = {d: {"total": 0, "correct": 0} for d in range(10)}
+    wrong_rows = []
+
+    with torch.inference_mode():
+        for label in range(10):
+            folder = args.dataset / str(label)
+            if not folder.is_dir():
+                raise SystemExit(f"Missing class directory: {folder}")
+
+            for path in sorted(folder.iterdir()):
+                if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".bmp"}:
+                    continue
+
+                with Image.open(path) as source:
+                    image = transform(source.convert("RGB")).unsqueeze(0)
+
+                prediction = int(model(image).argmax(dim=1).item())
+                total += 1
+                per_digit[label]["total"] += 1
+
+                if prediction == label:
+                    correct += 1
+                    per_digit[label]["correct"] += 1
+                else:
+                    wrong_rows.append((str(path), label, prediction))
+                    print(f"wrong: true={label}, predicted={prediction}, file={path}")
+
+    if total == 0:
+        raise SystemExit("No images found")
+
+    print(f"overall accuracy: {correct}/{total} = {correct / total:.2%}")
+    for label, counts in per_digit.items():
+        n = counts["total"]
+        if n:
+            score = counts["correct"] / n
+            print(f"{label}: {counts['correct']}/{n} = {score:.2%}")
+
+    report_dir = ROOT / "reports"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report = report_dir / "wrong_predictions.csv"
+    with report.open("w", encoding="utf-8", newline="") as file:
+        file.write("path,true_label,prediction\n")
+        for path, true_label, prediction in wrong_rows:
+            file.write(f'"{path}",{true_label},{prediction}\n')
+    print(f"Wrong-prediction report: {report}")
+
+
+if __name__ == "__main__":
+    main()
+~~~
+
+## Explanation
+
+- Folder names are the ground-truth labels.
+- eval mode and inference_mode disable training behavior and gradient tracking.
+- Overall accuracy is reported alongside per-digit accuracy, so a weak class is not hidden by the average.
+- Wrong predictions are recorded with paths so the actual examples can be inspected.
+- The evaluation set is not used to update weights. If you train on it, it is no longer a clean held-out evaluation set.
+
+## Run
+
+~~~powershell
+python python/evaluate_folder.py my_digits
+~~~
+
+## Done means
+
+- [ ] Every image has a correct label.
+- [ ] Evaluation does not train or update weights.
+- [ ] Overall and per-digit accuracy are printed.
+- [ ] Wrong examples are recorded.
+- [ ] The dataset remains separate from training data.
 
 ---
 
-# 36. DO NOT TRAIN ON IT YET
+# Chapter 7 — Turn failures into experiments
 
-At first this dataset is for evaluation.
+## Goal
 
-If you train on it immediately, you lose the ability to measure generalization to your handwriting.
+Classify wrong predictions before changing the model.
 
-Track:
+## Why
 
-~~~text
-overall accuracy
-accuracy per digit
-confusion matrix
-confidence
-wrong examples
+Randomly adding layers is not a debugging strategy. A failure can be caused by preprocessing, ambiguous handwriting, a wrong label, or model confusion. Each cause requires a different fix.
+
+## Code — maintain an experiment log
+
+Create experiments/README.md:
+
+~~~markdown
+# Experiment log
+
+For every experiment record:
+
+- ID and date
+- question being tested
+- baseline commit/checkpoint
+- exactly one primary change
+- dataset and split
+- overall and per-digit accuracy
+- parity result
+- runtime if performance is involved
+- conclusion and next action
+
+Never overwrite baseline results.
 ~~~
+
+## Example experiment
+
+Question: does a slightly larger margin around a digit improve personal-handwriting accuracy?
+
+1. Save the current results as the baseline.
+2. Change only the margin.
+3. Use the same checkpoint and same evaluation images.
+4. Record overall and per-digit accuracy.
+5. Inspect examples that improved and regressed.
+6. Keep the change only if the evidence supports it.
+
+Use the same method for target size, centering, interpolation, or model changes. Do not change five things at once; then you would not know which change mattered.
+
+## Done means
+
+- [ ] Each experiment starts with a question.
+- [ ] Baseline and changed results are preserved.
+- [ ] Only one primary factor changes at a time.
+- [ ] Parity is rerun after inference changes.
+- [ ] Conclusions are based on recorded results.
 
 ---
 
-# 37. CONFUSION MATRIX
+# Chapter 8 — Measure before optimizing C
 
-Instead of only:
+## Goal
 
-~~~text
-accuracy = 91%
+Measure inference time and identify the bottleneck before changing the implementation.
+
+## Why
+
+The code that looks slow is not necessarily the code that dominates runtime. A baseline prevents wasted work and lets you quantify whether an optimization helped.
+
+## Timing-loop structure
+
+The following is **structure only**, not a complete file: the timer function must be implemented with a monotonic clock supported by your target platform.
+
+~~~c
+const int warmup_runs = 20;
+const int measured_runs = 500;
+
+for (int i = 0; i < warmup_runs; ++i) {
+    model_forward(&model, &input, logits);
+}
+
+double start = monotonic_time_seconds();
+
+for (int i = 0; i < measured_runs; ++i) {
+    model_forward(&model, &input, logits);
+}
+
+double elapsed = monotonic_time_seconds() - start;
+printf("mean inference: %.6f ms\n",
+       elapsed * 1000.0 / measured_runs);
 ~~~
 
-you want:
+## Explanation
 
-~~~text
-true digit → predicted digit
-~~~
+Warm-up runs reduce first-use effects. Repeated runs reduce the influence of one noisy measurement. Timing only model_forward isolates inference from model loading and UI rendering. Measure preprocessing separately if end-to-end latency is the concern.
 
-Example:
+## Optimization sequence
 
-~~~text
-        predicted
-        0 1 2 3 ...
-true 0  18 0 1 0 ...
-true 1   0 20 0 0 ...
-true 2   1 0 16 2 ...
-~~~
+1. Record baseline timing.
+2. Identify the measured bottleneck.
+3. Change one implementation detail.
+4. Rerun unit tests, sanitizer tests, and parity.
+5. Measure again.
+6. Keep the change only if it improves the measured result without breaking correctness.
 
-This tells you what the model actually struggles with.
+Possible future work includes reducing repeated index calculations, improving memory locality, reusing temporary buffers, and changing convolution loop order. Do not begin with these guesses before collecting a baseline.
+
+## Done means
+
+- [ ] A reproducible benchmark exists.
+- [ ] Baseline timing is recorded.
+- [ ] A bottleneck is identified from measurement.
+- [ ] Before/after results exist for one optimization.
+- [ ] Tests, sanitizers, and parity still pass.
 
 ---
 
-# 38. CHAPTER 6 — DEFINITION OF DONE
+# Chapter 9 — Refactor only when tests make it safe
 
-- [ ] personal evaluation dataset exists
-- [ ] evaluation does not train
-- [ ] predictions are recorded
-- [ ] per-digit accuracy exists
-- [ ] confusion matrix exists
-- [ ] wrong examples can be inspected
-- [ ] confidence is recorded
+## Goal
 
----
+Separate inference, preprocessing, and application/UI control when the current code is difficult to test or change.
 
-# 39. CHAPTER 7 — ERROR ANALYSIS
+## Why
 
-## Status
+UI code should not be responsible for tensor arithmetic or model-file parsing. Separation lets us test inference without launching Raylib. However, a large refactor before tests exist is risky, so do this after the earlier chapters.
 
-**🔴 NEW**
-
-Now stop asking:
-
-> "Is the accuracy good?"
-
-and start asking:
-
-> "Why is this example wrong?"
-
-For every wrong prediction, collect:
-
-~~~text
-image
-true label
-prediction
-confidence
-preprocessed image
-~~~
-
-Then classify the failure:
-
-~~~text
-preprocessing
-ambiguous handwriting
-model confusion
-too small
-too large
-off-center
-broken drawing
-low contrast
-wrong label
-~~~
-
-This is much more useful than randomly changing the CNN.
-
----
-
-# 40. THE MODEL-IMPROVEMENT RULE
-
-Do not change the architecture because:
-
-> "Maybe more layers will fix it."
-
-First determine the failure source.
-
-Use:
-
-~~~text
-Wrong prediction
-      ↓
-Is preprocessing correct?
-      ↓
-yes
-      ↓
-Does MNIST evaluation work?
-      ↓
-yes
-      ↓
-Does C match PyTorch?
-      ↓
-yes
-      ↓
-Analyze handwriting distribution
-      ↓
-Only then consider model changes
-~~~
-
-This prevents architecture changes from hiding engineering bugs.
-
----
-
-# 41. CHAPTER 8 — PREPROCESSING EXPERIMENTS
-
-Now scientifically compare preprocessing strategies.
-
-Possible experiments:
-
-### Version A
-
-Current:
-
-~~~text
-bounding box
-→ square
-→ margin
-→ bilinear
-→ center
-~~~
-
-### Version B
-
-Different margin.
-
-### Version C
-
-Different target size.
-
-### Version D
-
-Different centering method.
-
-### Version E
-
-Stroke normalization.
-
-Do not change five things at once.
-
-Use an experiment table:
-
-| Experiment | Change | MNIST | Personal | Notes |
-|---|---|---:|---:|---|
-| A | baseline | ... | ... | current |
-| B | margin | ... | ... | |
-| C | target size | ... | ... | |
-| D | centering | ... | ... | |
-
-The point is learning experimental methodology.
-
----
-
-# 42. CHAPTER 9 — PROFILE THE C INFERENCE ENGINE
-
-## Status
-
-**🔴 NEW**
-
-Once correctness is established, measure performance.
-
-Do not optimize before this point.
-
-Measure at minimum:
-
-~~~text
-total inference time
-Conv1 time
-Conv2 time
-Pool1 time
-Conv3 time
-Conv4 time
-Pool2 time
-Linear time
-preprocessing time
-~~~
-
-You may discover that one layer dominates runtime.
-
-Then optimize that layer instead of guessing.
-
----
-
-# 43. OPTIMIZATION ORDER
-
-Always:
-
-~~~text
-correctness
-↓
-measure
-↓
-find bottleneck
-↓
-optimize bottleneck
-↓
-measure again
-↓
-parity test again
-~~~
-
-Never:
-
-~~~text
-"I think this loop is slow"
-↓
-rewrite everything
-~~~
-
-Possible future optimizations:
-
-- reduce repeated index calculations
-- improve pointer arithmetic
-- improve memory locality
-- reuse temporary buffers
-- reduce unnecessary allocations
-- compiler optimization flags
-- better convolution loop ordering
-
-Every optimization must still pass:
-
-- unit tests
-- sanitizer tests
-- parity tests
-
----
-
-# 44. CHAPTER 9 — DEFINITION OF DONE
-
-- [ ] inference benchmark exists
-- [ ] layer timings exist
-- [ ] bottleneck identified from measurements
-- [ ] one optimization implemented
-- [ ] before/after numbers recorded
-- [ ] parity still passes
-- [ ] sanitizer still passes
-- [ ] unit tests still pass
-
----
-
-# 45. CHAPTER 10 — IMPROVE THE C APPLICATION ARCHITECTURE
-
-The current main.c contains UI and application control logic.
-
-That is acceptable at the current size.
-
-Eventually a cleaner structure may be:
+## Possible target structure
 
 ~~~text
 c/
 ├── include/
 │   ├── nn.h
 │   ├── ui.h
-│   ├── app.h
-│   └── preprocessing.h
-│
+│   ├── preprocessing.h
+│   └── app.h
 └── src/
     ├── nn.c
     ├── ui.c
-    ├── app.c
     ├── preprocessing.c
+    ├── app.c
     └── main.c
 ~~~
 
-Do not refactor this immediately.
+## Safe refactoring procedure
 
-First finish correctness and testing.
+1. Choose one responsibility that can be separated without changing behavior.
+2. Move its declaration to the correct header and implementation to its source file.
+3. Update the build configuration.
+4. Compile with warnings enabled.
+5. Run unit tests and parity.
+6. Commit the working change before moving another responsibility.
 
-When this chapter arrives, the refactor should be driven by actual pain in the codebase.
+Do not create empty abstraction layers just to match the diagram. Split a module when the current code is hard to test or when different responsibilities need to change independently.
 
----
+## Done means
 
-# 46. CHAPTER 11 — MULTI-DIGIT RECOGNITION
-
-## Status
-
-**🔮 MUCH LATER**
-
-Only start this after single-digit recognition is reliable.
-
-Current problem:
-
-~~~text
-one canvas
-→ one digit
-~~~
-
-Future:
-
-~~~text
-image
- ↓
-segment digits
- ↓
-digit 1 → CNN
-digit 2 → CNN
-digit 3 → CNN
-digit 4 → CNN
-digit 5 → CNN
- ↓
-"12345"
-~~~
-
-This introduces a new computer-vision problem:
-
-> Where does one digit end and the next digit begin?
+- [ ] Inference can be tested without launching Raylib.
+- [ ] Preprocessing has deterministic tests.
+- [ ] UI code does not own tensor math or model serialization.
+- [ ] Existing behavior and parity remain unchanged.
 
 ---
 
-# 47. FIRST MULTI-DIGIT APPROACH
+# Chapter 10 — Move from one digit to multiple digits
 
-Do not immediately build a transformer.
+## Goal
 
-Start with segmentation.
+Extend from “which digit is in this image?” to “where are the digits and what sequence do they form?”
 
-Conceptually:
+## Why
+
+A classifier recognizes one digit. Multi-digit recognition additionally needs segmentation: identifying where each digit begins and ends.
+
+## First architecture
 
 ~~~text
-binary image
+input image
     ↓
-find connected regions
+foreground mask
     ↓
-bounding boxes
+connected components
     ↓
-sort left → right
+filter tiny noise components
     ↓
-crop each region
+sort boxes left-to-right
     ↓
-preprocess each crop
+crop each digit
     ↓
-CNN prediction
+reuse existing 28×28 preprocessing
     ↓
-concatenate digits
+run the existing C CNN per crop
+    ↓
+concatenate predictions
 ~~~
 
-This is the first step toward OCR.
+## Implementation order
+
+1. Add connected-component extraction for a binary image.
+2. Unit-test it with synthetic images containing known rectangles.
+3. Sort components from left to right.
+4. Crop each component and reuse the documented preprocessing.
+5. Call the existing inference function once per crop.
+6. Display the resulting digit string.
+7. Track segmentation errors separately from classifier errors.
+
+Start with clean, separated, horizontally written digits. Do not begin with overlapping cursive writing or a transformer OCR model.
+
+## Done means
+
+- [ ] Synthetic component tests pass.
+- [ ] Components are sorted in reading order.
+- [ ] Each crop uses the same documented preprocessing.
+- [ ] Segmentation errors are separated from classification errors.
+- [ ] A fixed evaluation set measures progress.
 
 ---
 
-# 48. CHAPTER 12 — SEQUENCE/OCR MODEL
+# What not to do now
 
-## Status
+Do not rewrite Conv2D or tensor storage without evidence of a bug. Do not add random layers because a few drawings are misclassified. Do not train on your held-out evaluation set and still call it held out. Do not optimize before measuring. Do not start C backpropagation before the inference pipeline is robust.
 
-**🔮 OPTIONAL FUTURE**
+# Your next action
 
-Only investigate this if segmentation becomes limiting.
+Start with Chapter 1 and make the successful manual parity workflow repeatable with one command. Then implement the C unit tests in Chapter 2. Your current parity numbers are already excellent; the next progress should come from automation and test coverage, not from trying to make the floating-point differences even smaller.
 
-Possible future direction:
+# Source-of-truth rule
 
-~~~text
-CNN
-+
-sequence model
-~~~
-
-or a modern vision architecture.
-
-This is intentionally far away.
-
-Do not jump here while single-digit inference is still being hardened.
-
----
-
-# 49. CHAPTER 13 — OPTIONAL C BACKPROPAGATION
-
-## Status
-
-**🔮 VERY LATE**
-
-You already have inference.
-
-Training in C would require:
-
-~~~text
-forward
-↓
-loss
-↓
-gradient calculation
-↓
-backpropagation
-↓
-parameter update
-↓
-optimizer
-~~~
-
-This is substantially larger than inference.
-
-The current architecture already gives you an important engineering separation:
-
-~~~text
-Python = training
-C      = deployment
-~~~
-
-C backpropagation is a later research/learning phase, not the next task.
-
----
-
-# 50. WHAT YOU SHOULD NOT DO NOW
-
-Do not currently:
-
-- rewrite Conv2D
-- rewrite the Tensor struct
-- rewrite the CNN architecture
-- rewrite the UI from scratch
-- add random layers
-- add C backprop
-- switch frameworks
-- optimize without measurements
-- train on your personal evaluation set immediately
-- replace working code just to make the project look more advanced
-
-Your next progress should come from **engineering depth**, not random new features.
-
----
-
-# 51. YOUR CURRENT EXACT MISSION
-
-## START HERE
-
-### Step 1
-
-Run:
-
-~~~text
-benchmark/run_pytorch.py
-~~~
-
-### Step 2
-
-Build/run the C benchmark.
-
-### Step 3
-
-Run:
-
-~~~text
-benchmark/compare.py
-~~~
-
-### Step 4
-
-Record the result.
-
-### Step 5
-
-Turn the comparison into a test that can fail automatically.
-
-### Step 6
-
-Intentionally break one value.
-
-### Step 7
-
-Confirm the test catches it.
-
-### Step 8
-
-Undo the bug.
-
-### Step 9
-
-Only when parity passes, begin:
-
-~~~text
-tests/test_nn.c
-~~~
-
----
-
-# 52. PROJECT ROADMAP FROM HERE
-
-~~~text
-                 YOU ARE HERE
-                      │
-                      ▼
-          ┌──────────────────────┐
-          │ 1. Numerical Parity  │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 2. C Unit Tests      │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 3. Sanitizers        │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 4. Model Format      │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 5. Preprocessing     │
-          │    Test Suite        │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 6. Personal Dataset  │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 7. Error Analysis    │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 8. Experiments       │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 9. Profiling         │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 10. Architecture     │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 11. Multi-digit OCR  │
-          └──────────┬───────────┘
-                     ▼
-          ┌──────────────────────┐
-          │ 12. Advanced ML      │
-          └──────────────────────┘
-~~~
-
----
-
-# 53. HOW TO USE THE OLD MATERIAL
-
-The old code-first textbook is preserved as a **foundation/reference document**, not the main path.
-
-You should NOT reread it from line 1.
-
-Use it only when you need to revisit:
-
-- Tensor memory layout
-- C pointer arithmetic
-- Conv2D implementation
-- MaxPool
-- Linear
-- model loading
-- forward pass
-- Raylib
-- Python training
-- export
-- basic CNN mathematics
-
-Reference:
-
-**[Foundation / completed implementation reference](foundations-reference.md)**
-
----
-
-# 54. COMPLETED IMPLEMENTATIONS — QUICK REFERENCE
-
-These are already in the project.
-
-## C
-
-~~~text
-c/src/nn.c
-├── linear
-├── relu
-├── argmax
-├── tensor_alloc
-├── tensor_free
-├── tensor_get
-├── tensor_set
-├── relu_tensor
-├── conv2d
-├── maxpool2d
-├── model_load
-└── model_forward
-~~~
-
-## UI
-
-~~~text
-c/src/ui.c
-├── canvas_clear
-├── canvas_draw_point
-├── canvas_draw_line
-├── bilinear sampling
-└── canvas_to_mnist_input
-~~~
-
-## Python
-
-~~~text
-python/model.py
-python/train.py
-python/evaluate.py
-python/export.py
-python/dataset.py
-~~~
-
-## Benchmark
-
-~~~text
-benchmark/run_pytorch.py
-benchmark/c_benchmark.c
-benchmark/compare.py
-~~~
-
-These are foundations.
-
-**Do not mistake "already implemented" for "never think about it again."**
-
-We will test, measure, and improve them later.
-
----
-
-# 55. WHAT "DONE" MEANS FROM NOW ON
-
-A feature is not DONE just because:
-
-~~~text
-it compiles
-~~~
-
-or:
-
-~~~text
-it works once
-~~~
-
-For this project, DONE means:
-
-~~~text
-implemented
-+
-tested
-+
-measured where appropriate
-+
-failure behavior understood
-+
-documented
-~~~
-
-That is the standard for the next stage.
-
----
-
-# 56. FINAL RULE
-
-Do not read this guide like a normal book.
-
-Read **one chapter**, then return to the repository.
-
-For example:
-
-~~~text
-Read Chapter 1
-     ↓
-open benchmark/
-     ↓
-run it
-     ↓
-modify code
-     ↓
-break it
-     ↓
-fix it
-     ↓
-commit it
-     ↓
-Chapter 2
-~~~
-
-The project is the textbook.
-
-The guide tells you what experiment to perform.
-
-The code is what you learn from.
-
-The tests are what prove you learned it.
-
----
-
-# APPENDIX — COMPLETED FOUNDATION MATERIAL
-
-Everything below the main roadmap is intentionally reference-oriented.
-
-If you already understand a section, skip it.
-
-The previous long code-first textbook is preserved in:
-
-**[foundations-reference.md](foundations-reference.md)**
-
-Use it when you need to inspect the reasoning behind an existing implementation.
-
----
-
-# CURRENT SOURCE OF TRUTH
-
-When the guide and the repository disagree:
-
-**the repository wins.**
-
-Important current files:
-
-- c/include/nn.h
-- c/src/nn.c
-- c/include/ui.h
-- c/src/ui.c
-- c/src/main.c
-- python/model.py
-- python/train.py
-- python/evaluate.py
-- python/export.py
-- benchmark/run_pytorch.py
-- benchmark/c_benchmark.c
-- benchmark/compare.py
-
----
-
-# ONE-PAGE CHECKLIST
-
-## Current milestone
-
-### Numerical parity
-
-- [ ] run PyTorch reference
-- [ ] run C reference
-- [ ] compare all stages
-- [ ] report first mismatch
-- [ ] automate pass/fail
-- [ ] intentionally break it
-- [ ] verify failure
-- [ ] restore
-- [ ] commit
-
-### Then
-
-- [ ] C unit tests
-- [ ] sanitizers
-- [ ] robust model format
-- [ ] preprocessing tests
-- [ ] personal handwriting evaluation
-- [ ] confusion matrix
-- [ ] error analysis
-- [ ] preprocessing experiments
-- [ ] profiling
-- [ ] optimization
-- [ ] architecture cleanup
-- [ ] multi-digit recognition
-- [ ] advanced OCR
-
-**Start with Chapter 1. Do not jump to Chapter 11.**
+The repository code is authoritative. If a function signature or architecture changes, update this guide to match it. Compile every new C example against the current headers. Never assume an example is compatible just because it looks plausible.
