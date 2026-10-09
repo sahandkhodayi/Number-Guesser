@@ -53,7 +53,7 @@ int main(void) {
     if (model_load(&model, "models/weights.bin") != 0) {
         return 1;
     }
-    if (read_input("benchmark/input.bin", input_data, 28 * 28) != 0) {
+    if (read_input("benchmark/pytorch_input.bin", input_data, 28 * 28) != 0) {
         return 1;
     }
 

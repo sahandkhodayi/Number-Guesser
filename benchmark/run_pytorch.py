@@ -35,7 +35,7 @@ def main() -> None:
     )
     image, label = dataset[SAMPLE_INDEX]
 
-    save_tensor(OUT / "input.bin", image)
+    save_tensor(OUT / "pytorch_input.bin", image)
     (OUT / "label.txt").write_text(str(label), encoding="utf-8")
 
     model = _MainModel(input_shape=1, hidden_units=32, output_shape=10)
