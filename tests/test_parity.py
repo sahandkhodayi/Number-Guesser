@@ -74,7 +74,7 @@ def main() -> None:
         "-o", str(executable), "-lm",
     ])
 
-    # C reads benchmark/pytorch_input.bin, the exact Python input.
+    # C reads benchmark/pytorch_input.bin, the exact Python input..
     run([str(executable)])
 
     print(f"\nComparing all stages with absolute tolerance {ATOL:g}")
