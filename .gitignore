@@ -22,6 +22,9 @@ c/models/*.bin
 data/*
 !data/.gitkeep
 
+# digits
+my_digit_dataset/*
+
 # C build artifacts
 build/
 *.o
