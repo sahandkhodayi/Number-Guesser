@@ -2,10 +2,10 @@
 
 PYTHON ?= python
 CMAKE ?= cmake
-BUILD_DIR := build
-APP := $(BUILD_DIR)/number_guesser
+CTEST ?= ctest
+BUILD_DIR ?= build
 
-.PHONY: help menu train evaluate export collect build run test parity c-test clean
+.PHONY: help menu train evaluate export collect configure build run test parity c-test clean
 
 help:
 	@echo "Number Guesser commands:"
@@ -14,12 +14,13 @@ help:
 	@echo "  make evaluate  - evaluate the saved checkpoint (no training)"
 	@echo "  make export    - export checkpoint weights for C inference"
 	@echo "  make collect   - collect handwritten digit images"
-	@echo "  make build     - configure and build the C/Raylib app"
-	@echo "  make run       - build if needed and launch the drawing app"
-	@echo "  make test      - run parity and C unit tests"
+	@echo "  make configure - configure CMake with the desktop GUI enabled"
+	@echo "  make build     - build the C/Raylib desktop app"
+	@echo "  make run       - build and launch the drawing app"
+	@echo "  make test      - run headless C tests and Python/C parity checks"
 	@echo "  make parity    - run Python/C numerical parity test"
-	@echo "  make c-test    - compile and run C unit tests"
-	@echo "  make clean     - remove generated build/test artifacts"
+	@echo "  make c-test    - build and run headless C unit tests"
+	@echo "  make clean     - remove generated build artifacts"
 
 menu:
 	$(PYTHON) main.py
@@ -36,22 +37,24 @@ export:
 collect:
 	$(PYTHON) python/digit_collector.py
 
-build:
-	$(CMAKE) -S . -B $(BUILD_DIR)
+configure:
+	$(CMAKE) -S . -B $(BUILD_DIR) -DBUILD_GUI=ON
+
+build: configure
 	$(CMAKE) --build $(BUILD_DIR)
 
 run: build
-	cd $(BUILD_DIR) && ./number_guesser
+	$(PYTHON) main.py
+
+c-test:
+	$(CMAKE) -S . -B $(BUILD_DIR) -DBUILD_GUI=OFF
+	$(CMAKE) --build $(BUILD_DIR) --target test_nn
+	$(CTEST) --test-dir $(BUILD_DIR) --output-on-failure
 
 parity:
 	$(PYTHON) tests/test_parity.py
 
-c-test:
-	mkdir -p $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Wpedantic tests/test_nn.c c/src/nn.c -o $(BUILD_DIR)/test_nn -lm
-	./$(BUILD_DIR)/test_nn
-
-test: parity c-test
+test: c-test parity
 
 clean:
 	$(CMAKE) -E rm -rf $(BUILD_DIR)
