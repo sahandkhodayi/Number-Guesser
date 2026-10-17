@@ -48,8 +48,8 @@ run: build
 
 c-test:
 	$(CMAKE) -S . -B $(BUILD_DIR) -DBUILD_GUI=OFF
-	$(CMAKE) --build $(BUILD_DIR) --target test_nn
-	$(CTEST) --test-dir $(BUILD_DIR) --output-on-failure
+	$(CMAKE) --build $(BUILD_DIR) --config Release --target test_nn
+	$(CTEST) --test-dir $(BUILD_DIR) -C Release --output-on-failure
 
 parity:
 	$(PYTHON) tests/test_parity.py
