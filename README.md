@@ -2,37 +2,126 @@
 
 A from-scratch learning project connecting machine learning, C systems programming, computer vision, and deployment.
 
-The project trains a CNN on MNIST with PyTorch, exports its weights, and runs the same network in native C. A Raylib application lets you draw a digit and send it through the C inference pipeline.
+The project trains a convolutional neural network (CNN) on MNIST with PyTorch, exports its weights, and runs the network in native C. A Raylib desktop application lets you draw a digit and send it through the C inference pipeline.
 
-## Architecture
+## Project at a glance
 
-    MNIST → PyTorch CNN → exported weights → C inference → Raylib UI
+```text
+MNIST data
+   │
+   ▼
+PyTorch training ──► checkpoint (.pth)
+                           │
+                           ▼
+                     weight exporter
+                           │
+                           ▼
+                    binary weights (.bin)
+                           │
+                           ▼
+                 native C inference engine
+                           ▲
+                           │
+                 Raylib drawing application
+```
 
-## Repository
+Python is responsible for training, evaluation, and exporting. C is responsible for running inference in the desktop application. The Python/C parity benchmark compares intermediate numerical results so that the two implementations can be checked against each other.
 
-- `python/` — training, evaluation, export, and personal digit collection
-- `c/` — native C inference and Raylib application
-- `benchmark/` — Python/C numerical comparison
-- `models/` — model artifacts
-- `tests/` — automated tests
-- `main.py` — interactive project menu (follow the workflow guide to add it)
-- `Makefile` — common development commands (follow the workflow guide to add it)
-- `fullguide.md` — code-first project textbook for testing, reliability, and new capabilities
-- `workflow-guide.md` — code-first guide for a user-friendly entry point and Makefile
-- `foundations-reference.md` — reference for existing implementations
+## Repository layout
 
-## Current state
+| Path | Purpose |
+|---|---|
+| `python/` | Dataset loading, training, evaluation, model definition, weight export, and handwritten-digit collection |
+| `c/include/`, `c/src/` | C inference API, CNN operations, model loading, preprocessing, and Raylib UI |
+| `benchmark/` | Python reference outputs and C outputs used by the numerical parity benchmark |
+| `tests/` | C unit tests and Python/C parity test driver |
+| `models/` | Generated model checkpoints and exported weights; these artifacts are not committed by default |
+| `main.py` | Interactive project menu |
+| `Makefile` | Short commands for common development tasks |
+| `CMakeLists.txt` | CMake build configuration for the desktop app |
+| `fullguide.md` | Detailed code-first project guide |
+| `workflow-guide.md` | Explanation of the menu and Makefile workflow |
+| `foundations-reference.md` | Reference material for existing implementations |
+| `docs/` | Architecture, setup, testing, and model/data documentation |
 
-The core CNN, C inference engine, drawing UI, preprocessing, model export, and Python/C tensor benchmark already exist. The next stage is to make the system reliable and measurable, not to repeat a beginner CNN tutorial.
+## Quick start
 
-## Guides
+The desktop GUI requires Python dependencies, a C compiler, CMake, and a Raylib package that CMake can find. The exact Raylib installation steps depend on your platform and toolchain.
 
-- Start with [fullguide.md](fullguide.md) for automated parity, C unit tests, sanitizers, model-file validation, preprocessing, handwriting evaluation, error analysis, profiling, and future features.
-- Follow [workflow-guide.md](workflow-guide.md) to add a root-level menu and Makefile for training, evaluation, exporting, tests, and running the GUI.
-- Use [foundations-reference.md](foundations-reference.md) only when you need to revisit code that is already implemented.
+### 1. Create a Python environment
 
-## Important workflow distinction
+Windows PowerShell:
 
-Training updates `models/number_guesser_model.pth`. Evaluation loads that checkpoint without training. Export writes `models/weights.bin` for the C application. After retraining, export again before running the C GUI if you want it to use the new weights.
+```powershell
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-> Do not claim something is correct because it runs. Measure it, test it, and understand why.
+Linux / WSL:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+If the PyTorch installation command fails, use the installation selector at [pytorch.org](https://pytorch.org/get-started/locally/) for your operating system and hardware, then install the remaining dependencies. The desktop app additionally needs Raylib configured for CMake.
+
+### 2. Inspect available commands
+
+```bash
+python main.py
+```
+
+On Windows, GNU Make is not included by default. Use a Make installation, WSL, or invoke the corresponding Python/CMake commands directly.
+
+Common commands from the repository root:
+
+| Command | Purpose |
+|---|---|
+| `make help` | List Makefile targets |
+| `make menu` | Open the interactive menu |
+| `make train` | Train and save a PyTorch checkpoint |
+| `make evaluate` | Evaluate the saved checkpoint without training |
+| `make export` | Export the checkpoint for C inference |
+| `make build` | Configure and build the Raylib app |
+| `make run` | Build the app and open the menu (choose option 1 to launch the GUI) |
+| `make test` | Run the configured parity and C unit tests |
+| `make clean` | Remove generated build artifacts |
+
+**Platform status:** the headless C unit tests and parity benchmark now use CMake to select the active compiler and executable format. The desktop GUI still requires Raylib configured for the chosen compiler, and Windows/Linux execution must be verified on those platforms before claiming full support. See [Development setup](docs/DEVELOPMENT.md) and [Testing](docs/TESTING.md).
+
+## Correct model workflow
+
+1. Train when you intentionally want to update the checkpoint: `make train`.
+2. Evaluate the saved checkpoint: `make evaluate`.
+3. Export the checkpoint to the binary format consumed by C: `make export`.
+4. Build and run the desktop application: `make run`.
+
+Training and export are separate operations. After retraining, export again before expecting the C application to use the new weights. Evaluation should not train or update the checkpoint.
+
+Generated files such as datasets, checkpoints, exported weights, and benchmark binaries are ignored by Git. A fresh clone therefore does not necessarily contain a trained model; train and export one before launching the GUI.
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) — components and data flow.
+- [Development setup](docs/DEVELOPMENT.md) — environments, tools, commands, and current platform caveats.
+- [Testing](docs/TESTING.md) — what the existing tests check and what still needs coverage.
+- [Model and data](docs/MODEL_AND_DATA.md) — tensor shapes, preprocessing, checkpoint/export contract, and artifact lifecycle.
+- [Docker and CI](docs/DOCKER_AND_CI.md) — headless container use and automated workflow coverage.
+- [Full project guide](fullguide.md) — deeper explanations, implementation work, and future improvements.
+- [Workflow guide](workflow-guide.md) — menu and Makefile design.
+- [Foundations reference](foundations-reference.md) — reminders for code that is already implemented.
+
+## Current status and limitations
+
+The core CNN, C inference engine, drawing UI, preprocessing, model export, C unit tests, and Python/C numerical benchmark exist. CMake now exposes headless test targets, the parity test uses CMake to build its executable, and a GitHub Actions workflow has been added. The workflow and native GUI builds still need to pass on the actual runners before cross-platform support is considered verified.
+
+The current parity test checks intermediate tensors for its configured input and tolerance. Passing it is evidence of agreement for those tested stages and inputs; it is not proof of general correctness, memory safety, or equivalent accuracy on all handwritten digits.
+
+## Engineering principle
+
+Do not claim a component is correct merely because it runs. Measure it, test it, and document the conditions under which the result was verified.

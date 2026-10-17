@@ -6,6 +6,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 BENCHMARK = ROOT / "benchmark"
+BUILD_DIR = ROOT / "build" / "parity"
 STAGES = [
     "input",
     "conv1", "relu1",
@@ -66,15 +67,25 @@ def main() -> None:
     # Regenerate reference tensors from the current model checkpoint.
     run([sys.executable, "benchmark/run_pytorch.py"])
 
-    # Build the C benchmark from the current source.
-    executable = BENCHMARK / "c_benchmark.exe"
+    # Configure/build through CMake so the compiler and executable suffix
+    # are selected by the active platform/toolchain.
     run([
-        "gcc", "-std=c11", "-Wall", "-Wextra", "-Wpedantic",
-        "benchmark/c_benchmark.c", "c/src/nn.c",
-        "-o", str(executable), "-lm",
+        "cmake", "-S", str(ROOT), "-B", str(BUILD_DIR),
+        "-DBUILD_GUI=OFF",
     ])
+    run(["cmake", "--build", str(BUILD_DIR), "--config", "Release", "--target", "c_benchmark"])
 
-    # C reads benchmark/pytorch_input.bin, the exact Python input..
+    executable_names = ("c_benchmark.exe", "c_benchmark")
+    executable = next(
+        (path for name in executable_names for path in sorted(BUILD_DIR.rglob(name))),
+        None,
+    )
+    if executable is None:
+        raise FileNotFoundError(
+            f"Could not find CMake-built benchmark executable in {BUILD_DIR}"
+        )
+
+    # C reads benchmark/pytorch_input.bin, the exact Python input.
     run([str(executable)])
 
     print(f"\nComparing all stages with absolute tolerance {ATOL:g}")

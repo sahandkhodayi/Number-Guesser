@@ -4,8 +4,9 @@ import torch
 from pathlib import Path
 from model import _MainModel
 
-MODEL_PATH = Path("models/number_guesser_model.pth")
-OUTPUT_PATH = Path("models/weights.bin")
+ROOT = Path(__file__).resolve().parents[1]
+MODEL_PATH = ROOT / "models" / "number_guesser_model.pth"
+OUTPUT_PATH = ROOT / "models" / "weights.bin"
 EXPECTED_BYTES = 175016
 
 # Order MUST match c/src/nn.c's model_load() exactly!
@@ -47,13 +48,16 @@ def main():
             f.write(tensor.contiguous().numpy().tobytes())
 
     actual_bytes = OUTPUT_PATH.stat().st_size
-    if actual_bytes == EXPECTED_BYTES:
-        print(f"✅ Wrote {OUTPUT_PATH} ({actual_bytes} bytes, expected {EXPECTED_BYTES}) [OK]")
-    else:
-        print(f"⚠️  Wrote {OUTPUT_PATH} ({actual_bytes} bytes, expected {EXPECTED_BYTES}) [MISMATCH]")
-        print("   Check that the architecture hasn't changed!")
+    if actual_bytes != EXPECTED_BYTES:
+        OUTPUT_PATH.unlink(missing_ok=True)
+        raise SystemExit(
+            f"Export failed: wrote {actual_bytes} bytes, expected "
+            f"{EXPECTED_BYTES}. The model architecture or export order "
+            "may no longer match the C inference engine."
+        )
 
-    print("[5] Done! You can now run C inference with `./verify`.")
+    print(f"✅ Wrote {OUTPUT_PATH} ({actual_bytes} bytes; size check passed).")
+    print("[5] Done! Build and run the C application to use these weights.")
 
 if __name__ == "__main__":
     main()
