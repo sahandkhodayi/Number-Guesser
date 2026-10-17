@@ -88,7 +88,7 @@ Common commands from the repository root:
 | `make evaluate` | Evaluate the saved checkpoint without training |
 | `make export` | Export the checkpoint for C inference |
 | `make build` | Configure and build the Raylib app |
-| `make run` | Build and launch the app |
+| `make run` | Build the app and open the menu (choose option 1 to launch the GUI) |
 | `make test` | Run the configured parity and C unit tests |
 | `make clean` | Remove generated build artifacts |
 
