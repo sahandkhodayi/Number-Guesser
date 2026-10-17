@@ -73,7 +73,7 @@ def main() -> None:
         "cmake", "-S", str(ROOT), "-B", str(BUILD_DIR),
         "-DBUILD_GUI=OFF",
     ])
-    run(["cmake", "--build", str(BUILD_DIR), "--target", "c_benchmark"])
+    run(["cmake", "--build", str(BUILD_DIR), "--config", "Release", "--target", "c_benchmark"])
 
     executable_names = ("c_benchmark.exe", "c_benchmark")
     executable = next(
