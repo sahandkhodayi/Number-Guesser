@@ -77,8 +77,8 @@ def run_tests():
         "cmake", "-S", str(ROOT), "-B", str(build_dir),
         "-DBUILD_GUI=OFF",
     ])
-    run_command(["cmake", "--build", str(build_dir), "--target", "test_nn"])
-    run_command(["ctest", "--test-dir", str(build_dir), "--output-on-failure"])
+    run_command(["cmake", "--build", str(build_dir), "--config", "Release", "--target", "test_nn"])
+    run_command(["ctest", "--test-dir", str(build_dir), "-C", "Release", "--output-on-failure"])
 
     # Parity builds its own headless benchmark target through CMake.
     run_python_script("tests/test_parity.py")
