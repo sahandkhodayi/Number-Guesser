@@ -1,6 +1,6 @@
 # Number-Guesser — One-Command Workflow Guide
 
-This guide adds a simple user-facing entry point and a root-level Makefile. It does **not** rewrite the CNN, training loop, evaluation loop, C inference, or tests that already exist.
+This is the implementation guide for the root-level menu and Makefile, which are now present in the repository. It is retained as a code-first explanation of their design; it is not a list of files that still need to be created. It does **not** rewrite the CNN, training loop, evaluation loop, C inference, or tests.
 
 The goal is to make common tasks discoverable and repeatable:
 
@@ -22,7 +22,7 @@ This separation avoids accidentally training when you only want to check a model
 
 ---
 
-# Chapter 1 — Add a root-level `main.py`
+# Chapter 1 — Root-level `main.py`
 
 ## Goal
 
@@ -34,7 +34,7 @@ The project already has separate Python scripts. That separation is good: traini
 
 We will call the existing scripts as subprocesses. That keeps their current import behavior and makes errors visible in the terminal.
 
-## Code — create `main.py` in the repository root
+## Reference implementation — `main.py`
 
 ```python
 from pathlib import Path
@@ -218,7 +218,7 @@ Try menu option 3 first if a trained checkpoint already exists. Try option 2 onl
 
 ---
 
-# Chapter 2 — Add a root-level Makefile
+# Chapter 2 — Root-level Makefile
 
 ## Goal
 
@@ -228,7 +228,7 @@ Expose common project tasks as short, memorable commands.
 
 A menu is useful for a person exploring the project. A Makefile is useful for development, scripts, documentation, and automation. They serve different purposes and can coexist.
 
-## Code — create `Makefile` in the repository root
+## Reference implementation — `Makefile`
 
 Use tabs (not spaces) at the start of each recipe line.
 
