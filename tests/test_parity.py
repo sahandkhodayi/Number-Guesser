@@ -77,8 +77,7 @@ def main() -> None:
 
     executable_names = ("c_benchmark.exe", "c_benchmark")
     executable = next(
-        (BUILD_DIR / name for name in executable_names
-         if (BUILD_DIR / name).is_file()),
+        (path for name in executable_names for path in sorted(BUILD_DIR.rglob(name))),
         None,
     )
     if executable is None:
