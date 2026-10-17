@@ -16,7 +16,7 @@ help:
 	@echo "  make collect   - collect handwritten digit images"
 	@echo "  make configure - configure CMake with the desktop GUI enabled"
 	@echo "  make build     - build the C/Raylib desktop app"
-	@echo "  make run       - build and launch the drawing app"
+	@echo "  make run       - build the app and open the interactive menu"
 	@echo "  make test      - run headless C tests and Python/C parity checks"
 	@echo "  make parity    - run Python/C numerical parity test"
 	@echo "  make c-test    - build and run headless C unit tests"
