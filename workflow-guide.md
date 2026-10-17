@@ -2,6 +2,8 @@
 
 This is the implementation guide for the root-level menu and Makefile, which are now present in the repository. It is retained as a code-first explanation of their design; it is not a list of files that still need to be created. It does **not** rewrite the CNN, training loop, evaluation loop, C inference, or tests.
 
+> **Maintenance note:** this guide preserves the original implementation walkthrough, so some code examples may predate the newer CMake/CTest portability work. Treat the current `main.py`, `Makefile`, `CMakeLists.txt`, and `tests/test_parity.py` as the source of truth when an example differs.
+
 The goal is to make common tasks discoverable and repeatable:
 
 - launch the interactive application;
