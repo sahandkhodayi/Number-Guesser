@@ -35,7 +35,7 @@ def collect_digits():
 
 
 def build_app():
-    run_command(["cmake", "-S", str(ROOT), "-B", str(ROOT / "build")])
+    run_command(["cmake", "-S", str(ROOT), "-B", str(ROOT / "build"), "-DBUILD_GUI=ON"])
     run_command(["cmake", "--build", str(ROOT / "build")])
 
 
