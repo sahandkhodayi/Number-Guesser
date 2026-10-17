@@ -57,6 +57,10 @@ Run these from the repository root.
 
 The C unit tests and parity benchmark now use CMake, so compiler selection and executable suffixes come from the configured toolchain. The headless test path can be configured with `-DBUILD_GUI=OFF`, avoiding a Raylib requirement for unit tests. Native Windows GUI support still depends on a compatible compiler/Raylib installation, and must be verified on an actual Windows machine before being claimed as tested.
 
+## Continuous integration status
+
+The GitHub Actions workflow runs headless C unit tests on Windows and Ubuntu and runs the full Python/C parity pipeline on Ubuntu. This is automated coverage for those runner environments; it does not replace a manual check of the Raylib GUI on each supported desktop setup.
+
 ## Recommended verification order
 
 1. Confirm the active interpreter: `python --version` and `python -m pip --version`.
