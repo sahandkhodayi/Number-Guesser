@@ -111,13 +111,14 @@ Generated files such as datasets, checkpoints, exported weights, and benchmark b
 - [Development setup](docs/DEVELOPMENT.md) — environments, tools, commands, and current platform caveats.
 - [Testing](docs/TESTING.md) — what the existing tests check and what still needs coverage.
 - [Model and data](docs/MODEL_AND_DATA.md) — tensor shapes, preprocessing, checkpoint/export contract, and artifact lifecycle.
+- [Docker and CI](docs/DOCKER_AND_CI.md) — headless container use and automated workflow coverage.
 - [Full project guide](fullguide.md) — deeper explanations, implementation work, and future improvements.
 - [Workflow guide](workflow-guide.md) — menu and Makefile design.
 - [Foundations reference](foundations-reference.md) — reminders for code that is already implemented.
 
 ## Current status and limitations
 
-The core CNN, C inference engine, drawing UI, preprocessing, model export, C unit tests, and Python/C numerical benchmark exist. The next engineering work is to make builds and tests reliable across Windows and Linux/WSL, expand automated coverage, validate model artifacts strictly, and add CI.
+The core CNN, C inference engine, drawing UI, preprocessing, model export, C unit tests, and Python/C numerical benchmark exist. CMake now exposes headless test targets, the parity test uses CMake to build its executable, and a GitHub Actions workflow has been added. The workflow and native GUI builds still need to pass on the actual runners before cross-platform support is considered verified.
 
 The current parity test checks intermediate tensors for its configured input and tolerance. Passing it is evidence of agreement for those tested stages and inputs; it is not proof of general correctness, memory safety, or equivalent accuracy on all handwritten digits.
 
