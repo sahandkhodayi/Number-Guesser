@@ -92,7 +92,7 @@ Common commands from the repository root:
 | `make test` | Run the configured parity and C unit tests |
 | `make clean` | Remove generated build artifacts |
 
-**Important:** the existing Makefile and parity script still contain platform assumptions. In particular, the parity script invokes GCC and names its executable with a Windows suffix, while the Makefile uses Unix-oriented commands. Treat the commands as the current workflow, not yet as a verified Windows-and-Linux cross-platform guarantee. See [Development setup](docs/DEVELOPMENT.md) and [Testing](docs/TESTING.md).
+**Platform status:** the headless C unit tests and parity benchmark now use CMake to select the active compiler and executable format. The desktop GUI still requires Raylib configured for the chosen compiler, and Windows/Linux execution must be verified on those platforms before claiming full support. See [Development setup](docs/DEVELOPMENT.md) and [Testing](docs/TESTING.md).
 
 ## Correct model workflow
 
