@@ -39,57 +39,49 @@ def build_app():
     run_command(["cmake", "--build", str(ROOT / "build")])
 
 
-def run_app():
-    executable_names = (
-        ["number_guesser.exe", "number_guesser"]
-        if sys.platform == "win32"
-        else ["number_guesser", "number_guesser.exe"]
-    )
+def find_executable(build_dir, names):
+    """Find a CMake executable in single- or multi-configuration build layouts."""
+    for name in names:
+        matches = sorted(build_dir.rglob(name))
+        if matches:
+            return matches[0]
+    return None
 
+
+def run_app():
+    executable_names = ("number_guesser.exe", "number_guesser")
     build_dir = ROOT / "build"
-    executable = next(
-        (build_dir / name for name in executable_names
-         if (build_dir / name).is_file()),
-        None,
-    )
+    executable = find_executable(build_dir, executable_names)
 
     if executable is None:
         print("Application is not built yet. Building it first...")
         build_app()
-        executable = next(
-            (build_dir / name for name in executable_names
-             if (build_dir / name).is_file()),
-            None,
-        )
+        executable = find_executable(build_dir, executable_names)
 
     if executable is None:
         raise SystemExit(
             "Could not find the built application. Check CMake and Raylib."
         )
 
-    # The C app currently loads ../models/weights.bin relative to its
-    # working directory, so run it from build/.
+    # Keep build/ as the working directory because the C app currently loads
+    # ../models/weights.bin relative to the process working directory.
     run_command([str(executable)], cwd=build_dir)
 
 
 def run_tests():
-    # Run the Python/C numerical parity regression test.
-    run_python_script("tests/test_parity.py")
+    build_dir = ROOT / "build"
 
-    # Compile and run the C unit tests.
-    test_executable = ROOT / "build" / (
-        "test_nn.exe" if sys.platform == "win32" else "test_nn"
-    )
-    test_executable.parent.mkdir(parents=True, exist_ok=True)
-
+    # Use CMake/CTest so the selected compiler and executable suffix are
+    # handled by the active platform/toolchain.
     run_command([
-        "gcc", "-std=c11", "-Wall", "-Wextra", "-Wpedantic",
-        str(ROOT / "tests/test_nn.c"),
-        str(ROOT / "c/src/nn.c"),
-        "-o", str(test_executable),
-        "-lm",
+        "cmake", "-S", str(ROOT), "-B", str(build_dir),
+        "-DBUILD_GUI=OFF",
     ])
-    run_command([str(test_executable)])
+    run_command(["cmake", "--build", str(build_dir), "--target", "test_nn"])
+    run_command(["ctest", "--test-dir", str(build_dir), "--output-on-failure"])
+
+    # Parity builds its own headless benchmark target through CMake.
+    run_python_script("tests/test_parity.py")
 
 
 ACTIONS = {
