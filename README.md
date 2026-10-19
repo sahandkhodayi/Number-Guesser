@@ -11,18 +11,10 @@ After adding it, replace this comment with:
 
 ## Demo
 
-<!-- VIDEO / GIF — MAIN SHOWCASE
-What to add: a 10–20 second screen recording or GIF:
-1. Start with the empty canvas.
-2. Draw a digit (for example, 7).
-3. Click the predict/recognize button.
-4. Show the predicted digit.
-5. If useful, clear the canvas and try a second digit.
-Keep it focused on the app; no long intro or voice-over is needed.
-Suggested file: assets/demo.gif (GIF) or a hosted MP4 link.
-Replace this comment with:
-<p align="center"><img src="assets/demo.gif" alt="Demo: draw a digit and see the model prediction" width="800"></p>
--->
+
+<video width="320" height="240" controls>
+  <source src="assets/demo.mp4" type="video/mp4">
+</video>
 
 *Add a short recording here showing the complete experience: draw → predict → result.*
 
