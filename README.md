@@ -12,9 +12,10 @@ After adding it, replace this comment with:
 ## Demo
 
 
-<video width="320" height="240" controls>
-  <source src="assets/demo.mp4" type="video/mp4">
-</video>
+<p align="center">
+  <video src="assets/demo.mp4" width="800" controls muted playsinline
+         aria-label="Demo: draw a digit and see the model prediction"></video>
+</p>
 
 *Add a short recording here showing the complete experience: draw → predict → result.*
 
