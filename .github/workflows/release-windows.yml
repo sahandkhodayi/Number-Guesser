@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*"
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -39,16 +41,18 @@ jobs:
       - name: Install static Raylib dependency
         shell: pwsh
         run: |
-          if (-not $env:VCPKG_ROOT) {
-            throw "VCPKG_ROOT is not configured on this runner."
+          $vcpkgRoot = $env:VCPKG_ROOT
+          if (-not $vcpkgRoot) { $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT }
+          if (-not $vcpkgRoot) {
+            throw "Neither VCPKG_ROOT nor VCPKG_INSTALLATION_ROOT is configured on this runner."
           }
-          & "$env:VCPKG_ROOT/vcpkg.exe" install raylib:x64-windows-static
+          & "$vcpkgRoot/vcpkg.exe" install raylib:x64-windows-static
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Configure Windows desktop app
         shell: pwsh
         run: |
-          cmake -S . -B build -DBUILD_GUI=ON "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DBUILD_GUI=ON "-DCMAKE_TOOLCHAIN_FILE=$vcpkgRoot/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build desktop app and headless tests
