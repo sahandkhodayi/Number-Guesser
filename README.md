@@ -1,87 +1,87 @@
 # Number Guesser
 
-**Draw a handwritten digit. Watch a neural network recognize it.**  
-Number Guesser is a small computer-vision project that connects a PyTorch model to a native C inference engine and a desktop drawing app.
+A handwritten-digit recognition app built with **PyTorch, C, and Raylib**. Draw a digit, run it through a convolutional neural network, and see the prediction.
 
-> **Version 1.0.0 — release preparation**
-> The source code and development workflow are in the repository. A genuinely easy-to-install release still needs tested, downloadable desktop builds and a bundled model file; see [the release checklist](#what-is-needed-for-an-easy-download).
-
-<!--
-SHOWCASE MEDIA — add these files when ready:
-1. Record a short 10–20 second GIF showing: draw a digit -> prediction appears.
-   Save as assets/demo.gif, then uncomment the line below.
-2. Add a clean screenshot of the running app as assets/screenshot.png, then uncomment the line below.
-![Number Guesser demo](assets/demo.gif)
-![Number Guesser desktop app](assets/screenshot.png)
+<!-- IMAGE 1 — PROJECT BANNER
+What to add: a wide, clean image of the actual app window with a handwritten digit on the canvas and the predicted digit visible.
+Suggested file: assets/banner.png
+After adding it, replace this comment with:
+<p align="center"><img src="assets/banner.png" alt="Number Guesser application" width="800"></p>
 -->
 
-## See it in action
+## Demo
 
-**Demo video / GIF:** *Reserved for a short recording of drawing a digit and seeing the prediction.*
+<!-- VIDEO / GIF — MAIN SHOWCASE
+What to add: a 10–20 second screen recording or GIF:
+1. Start with the empty canvas.
+2. Draw a digit (for example, 7).
+3. Click the predict/recognize button.
+4. Show the predicted digit.
+5. If useful, clear the canvas and try a second digit.
+Keep it focused on the app; no long intro or voice-over is needed.
+Suggested file: assets/demo.gif (GIF) or a hosted MP4 link.
+Replace this comment with:
+<p align="center"><img src="assets/demo.gif" alt="Demo: draw a digit and see the model prediction" width="800"></p>
+-->
 
-**Application screenshot:** *Reserved for a clear screenshot of the running desktop app.*
+*Add a short recording here showing the complete experience: draw → predict → result.*
 
-These are intentional placeholders so the README can be completed with real captures of the actual program—not mockups.
+## How it works
 
-## What it does
+<!-- IMAGE 2 — PIPELINE DIAGRAM (OPTIONAL)
+What to add: a simple diagram with four boxes and arrows:
+MNIST → PyTorch training → exported weights → native C inference → Raylib app.
+This is optional; a real demo and screenshot are more important.
+Suggested file: assets/pipeline.png
+-->
 
-- Trains a convolutional neural network (CNN) on the MNIST handwritten-digit dataset using PyTorch.
-- Exports trained weights to a compact binary file.
-- Runs the model's forward pass in native C.
-- Provides a Raylib desktop UI where you can draw a digit and get a prediction.
-- Includes a numerical parity test that compares selected intermediate values from the Python and C implementations.
+1. **Train:** Python and PyTorch train a CNN on the MNIST handwritten-digit dataset.
+2. **Export:** the trained model's weights are converted into a binary file that the C program can load.
+3. **Predict:** the desktop app passes the drawn digit through the native C inference engine and displays the result.
+4. **Check:** C unit tests and a Python/C numerical comparison help verify the implementations.
 
-### How the pieces fit together
+The project combines machine learning with lower-level systems programming: Python handles training, while C runs the model in the desktop app.
 
-```text
-MNIST dataset
-    |
-    v
-PyTorch model (Python) ---> checkpoint (.pth)
-                                  |
-                                  v
-                           weight exporter
-                                  |
-                                  v
-                           weights.bin
-                                  |
-                                  v
-Draw a digit ---> Raylib UI ---> native C CNN ---> predicted digit
-                                  ^
-                                  |
-                         C unit tests / parity checks
-```
+## Features
 
-Python handles training, evaluation, and exporting. C handles inference in the desktop app.
+- Draw handwritten digits in a desktop application.
+- Recognize digits using a CNN trained on MNIST.
+- Run model inference in native C instead of using PyTorch for predictions in the app.
+- Train, evaluate, and export the model using Python scripts.
+- Compare selected Python and C intermediate values with a numerical parity test.
+- Collect handwritten digit samples using the project's digit-collection tool.
+
+## Tech stack
+
+- **Python / PyTorch** — dataset, model training, evaluation, and weight export.
+- **C** — neural-network inference and model loading.
+- **Raylib** — desktop drawing interface.
+- **CMake / Make** — build and development workflows.
+- **CTest / GitHub Actions** — automated checks.
 
 ## Getting started
 
-### The easiest option
+> **Note:** this repository currently provides the source code and developer workflow. It does not yet provide a verified, ready-to-run desktop download with all required files bundled. Building the GUI from source requires the development tools below.
 
-When downloadable desktop builds are published, you should be able to download the archive for your operating system, extract it, and run the application without installing Python, PyTorch, CMake, or a C compiler.
+### Requirements
 
-**Those ready-to-run Windows/Linux packages are not attached yet.** Until then, use the source setup below. I don't want to label a source-code checkout as a one-click release.
+- Python 3.10–3.12 recommended.
+- A working PyTorch installation.
+- CMake and a C compiler.
+- Raylib installed and discoverable by CMake for the desktop GUI.
 
-### Run from source
-
-You'll need:
-- Python 3.10–3.12 recommended (the CI workflow currently uses Python 3.12).
-- Git, CMake, and a working C compiler.
-- Raylib installed and discoverable by CMake to build the desktop GUI.
-- A supported PyTorch installation. If installing PyTorch fails, choose the matching command at [pytorch.org](https://pytorch.org/get-started/locally/).
-
-#### 1. Download the project
+### 1. Get the source
 
 ```bash
 git clone https://github.com/sahandkhodayi/Number-Guesser.git
 cd Number-Guesser
 ```
 
-Or use GitHub's **Code → Download ZIP** option.
+Or download the repository ZIP from GitHub.
 
-#### 2. Create an environment and install Python packages
+### 2. Install Python dependencies
 
-Windows PowerShell:
+**Windows PowerShell**
 
 ```powershell
 py -3.12 -m venv .venv
@@ -90,7 +90,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Linux / WSL:
+**Linux / WSL**
 
 ```bash
 python3 -m venv .venv
@@ -99,51 +99,65 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-#### 3. Create the model files
+If PyTorch installation fails, choose the appropriate command for your OS and hardware from the [official PyTorch installation page](https://pytorch.org/get-started/locally/).
 
-A fresh checkout does not include generated model weights. Train the model and export the weights used by the C app:
+### 3. Train and export the model
+
+A fresh clone does not contain generated model weights. Run:
 
 ```bash
 python python/train.py
 python python/export.py
 ```
 
-Training downloads/uses the MNIST dataset and may take a while depending on your hardware. You only need to train again if you want to create a new checkpoint; the export step must be repeated after retraining.
+Training uses the MNIST dataset and may take a while. If you retrain the model later, export the weights again before running the C app.
 
-#### 4. Build and launch the desktop app
+### 4. Build the desktop app
 
-Make sure Raylib is installed and CMake can find it, then run:
+Install Raylib first, then configure and build:
 
 ```bash
 cmake -S . -B build -DBUILD_GUI=ON
 cmake --build build --config Release
 ```
 
-Launch the generated `number_guesser` executable from the `build` directory (on Windows it will normally be under `build/Release`). Running it with `build` as the working directory is important because the app currently loads `../models/weights.bin` relative to its working directory.
+Run the generated `number_guesser` executable with `build/` as its working directory, because the app currently loads `../models/weights.bin` relative to the working directory. On Windows, the executable is normally under `build/Release/`.
 
-The repository's `main.py` menu can also run common tasks:
+You can also launch the interactive project menu:
 
 ```bash
 python main.py
 ```
 
-## Useful development commands
+## Development commands
 
-| Command | What it does |
+| Command | Purpose |
 |---|---|
 | `make train` | Train the PyTorch model |
 | `make evaluate` | Evaluate the saved checkpoint |
 | `make export` | Export weights for C inference |
-| `make build` | Build the desktop app (requires Raylib) |
+| `make build` | Build the desktop app |
 | `make run` | Build and open the project menu |
 | `make test` | Run C unit tests and Python/C parity checks |
 | `make clean` | Remove generated build artifacts |
 
-On Windows, GNU Make may not be installed by default. You can use WSL, install Make, or run the Python/CMake commands directly.
+GNU Make may not be installed on Windows by default. You can use WSL, install Make, or run the Python/CMake commands directly.
 
-## Testing and engineering
+## Project structure
 
-The repository includes C unit tests, a Python/C numerical parity test, and a GitHub Actions workflow. These checks cover the configured tests—not every possible image, all memory-safety issues, or successful GUI launch on every desktop.
+| Path | Purpose |
+|---|---|
+| `python/` | Model, training, evaluation, data helpers, and export |
+| `c/include/`, `c/src/` | C inference engine and Raylib UI |
+| `tests/` | C unit tests and Python/C parity test |
+| `benchmark/` | Inputs and outputs for numerical comparison |
+| `models/` | Generated model checkpoints and exported weights |
+| `main.py` | Interactive project menu |
+| `CMakeLists.txt`, `Makefile` | Build and development commands |
+
+## Tests and documentation
+
+The repository includes C unit tests, a Python/C numerical parity test, and a GitHub Actions workflow. These checks cover configured test cases; they do not guarantee correct predictions for every handwriting style or prove that the GUI works on every machine.
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development setup](docs/DEVELOPMENT.md)
@@ -153,37 +167,17 @@ The repository includes C unit tests, a Python/C numerical parity test, and a Gi
 - [Full project guide](fullguide.md)
 - [Workflow guide](workflow-guide.md)
 
-## What is needed for an easy download?
+## Docker
 
-Before calling this a polished v1.0.0 desktop release, the release should include:
+Docker is an optional tool for developers and automated testing. The current image is designed for headless C tests; it does **not** run the Raylib desktop GUI. End users should not need Docker to use a future packaged desktop release.
 
-- [ ] A short real demo GIF and a screenshot.
-- [ ] A tested Windows build archive with the executable, required runtime files, and `models/weights.bin`.
-- [ ] A tested Linux build archive, or a clearly stated list of supported Linux distributions.
-- [ ] A simple first-run test on a clean machine that does not have the development environment installed.
-- [ ] A release page with clear download names and short run instructions.
-- [ ] Passing CI checks, plus a manual GUI smoke test on each platform advertised.
+## Roadmap
 
-Until those are done, the source project is usable for developers, but the end-user install experience is not yet one-click.
-
-## Why Docker is here
-
-Docker is currently for **developers and CI**, not for someone who just wants to draw a digit. It gives the headless C tests a consistent environment and is useful for debugging/build automation. The Raylib drawing window is graphical, so the current Docker image does not package or launch the desktop UI.
-
-**For an ordinary user, Docker should not be required.** The right end-user experience is a downloadable app bundle with the trained weights included. Docker can remain an optional developer/testing tool.
-
-## Project structure
-
-| Path | Purpose |
-|---|---|
-| `python/` | Model, training, evaluation, data helpers, and weight export |
-| `c/include/`, `c/src/` | C inference engine and Raylib desktop UI |
-| `tests/` | C unit tests and Python/C parity test |
-| `benchmark/` | Numerical comparison inputs and outputs |
-| `models/` | Generated checkpoints and exported weights |
-| `main.py` | Interactive project menu |
-| `CMakeLists.txt`, `Makefile` | Build and development commands |
+- [ ] Add a real demo recording and application screenshot.
+- [ ] Package and test a ready-to-run Windows build.
+- [ ] Package and test a ready-to-run Linux build.
+- [ ] Publish a release with clear download and launch instructions.
 
 ---
 
-Built as a learning project exploring neural networks, computer vision, C, and the path from a trained model to a native application.
+Made as a learning project exploring neural networks, computer vision, C, and running a trained model outside its original Python framework.
