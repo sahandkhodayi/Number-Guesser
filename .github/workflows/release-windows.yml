@@ -15,6 +15,8 @@ jobs:
   windows-release:
     name: Build portable Windows app
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
 
     steps:
       - name: Check out source
