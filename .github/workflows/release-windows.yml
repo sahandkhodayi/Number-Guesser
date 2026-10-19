@@ -52,6 +52,11 @@ jobs:
       - name: Configure Windows desktop app
         shell: pwsh
         run: |
+          $vcpkgRoot = $env:VCPKG_ROOT
+          if (-not $vcpkgRoot) { $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT }
+          if (-not $vcpkgRoot) {
+            throw "Neither VCPKG_ROOT nor VCPKG_INSTALLATION_ROOT is configured on this runner."
+          }
           cmake -S . -B build -DBUILD_GUI=ON "-DCMAKE_TOOLCHAIN_FILE=$vcpkgRoot/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
