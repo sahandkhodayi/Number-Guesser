@@ -87,9 +87,27 @@ static void run_prediction(AppState *app, const CnnModel *model) {
 
 int main(void) {
     CnnModel model;
-    int model_ok = (model_load(&model, "../models/weights.bin") == 0);
+    /* First look beside the executable so a packaged folder works even if
+       the process is launched with a different working directory. */
+    char executable_model_path[1024];
+    snprintf(executable_model_path, sizeof(executable_model_path),
+             "%smodels/weights.bin", GetApplicationDirectory());
+    int model_ok = (model_load(&model, executable_model_path) == 0);
+
+    /* Also support the repository's existing build and development layouts. */
     if (!model_ok) {
-        fprintf(stderr, "Warning: could not load models/weights.bin\n");
+        model_ok = (model_load(&model, "models/weights.bin") == 0);
+    }
+    if (!model_ok) {
+        model_ok = (model_load(&model, "../models/weights.bin") == 0);
+    }
+    if (!model_ok) {
+        model_ok = (model_load(&model, "../../models/weights.bin") == 0);
+    }
+    if (!model_ok) {
+        fprintf(stderr,
+                "Warning: could not find model weights beside the executable "
+                "or in the expected development folders.\n");
     }
 
     InitWindow(WINDOW_W, WINDOW_H, "Number Guesser Pro");

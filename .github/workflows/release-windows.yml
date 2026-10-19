@@ -1,0 +1,107 @@
+name: Package Windows Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows-release:
+    name: Build portable Windows app
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install training dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Train model for the release
+        run: python python/train.py
+
+      - name: Export weights for native C inference
+        run: python python/export.py
+
+      - name: Install static Raylib dependency
+        shell: pwsh
+        run: |
+          $vcpkgRoot = $env:VCPKG_ROOT
+          if (-not $vcpkgRoot) { $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT }
+          if (-not $vcpkgRoot) {
+            throw "Neither VCPKG_ROOT nor VCPKG_INSTALLATION_ROOT is configured on this runner."
+          }
+          & "$vcpkgRoot/vcpkg.exe" install raylib:x64-windows-static
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Configure Windows desktop app
+        shell: pwsh
+        run: |
+          $vcpkgRoot = $env:VCPKG_ROOT
+          if (-not $vcpkgRoot) { $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT }
+          if (-not $vcpkgRoot) {
+            throw "Neither VCPKG_ROOT nor VCPKG_INSTALLATION_ROOT is configured on this runner."
+          }
+          cmake -S . -B build -DBUILD_GUI=ON "-DCMAKE_TOOLCHAIN_FILE=$vcpkgRoot/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build desktop app and headless tests
+        run: cmake --build build --config Release
+
+      - name: Run C unit tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Prepare portable package
+        shell: pwsh
+        run: |
+          $package = "NumberGuesser-Windows"
+          New-Item -ItemType Directory -Force "$package/models" | Out-Null
+          $exe = Get-ChildItem -Path build -Filter "number_guesser.exe" -Recurse | Select-Object -First 1
+          if (-not $exe) { throw "number_guesser.exe was not produced by the build." }
+          Copy-Item $exe.FullName "$package/NumberGuesser.exe"
+          Copy-Item "models/weights.bin" "$package/models/weights.bin"
+          @'
+          Number Guesser - Windows portable build
+
+          Run NumberGuesser.exe to start the app.
+          The model weights are included in the models folder.
+          No Python, PyTorch, C compiler, or CMake installation is needed to run this package.
+
+          If Windows reports that a runtime component is missing, please report the exact
+          message in the GitHub Issues page:
+          https://github.com/sahandkhodayi/Number-Guesser/issues
+
+          This is a portable folder package; keep the models folder beside the executable.
+          '@ | Set-Content "$package/README.txt"
+          Compress-Archive -Path "$package/*" -DestinationPath "NumberGuesser-Windows.zip" -Force
+
+      - name: Upload portable package as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NumberGuesser-Windows
+          path: NumberGuesser-Windows.zip
+          if-no-files-found: error
+
+      - name: Publish GitHub release asset for version tags
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: NumberGuesser-Windows.zip
