@@ -1,59 +1,90 @@
 # Number Guesser
 
-A from-scratch learning project connecting machine learning, C systems programming, computer vision, and deployment.
+**Draw a handwritten digit. Watch a neural network recognize it.**  
+Number Guesser is a small computer-vision project that connects a PyTorch model to a native C inference engine and a desktop drawing app.
 
-The project trains a convolutional neural network (CNN) on MNIST with PyTorch, exports its weights, and runs the network in native C. A Raylib desktop application lets you draw a digit and send it through the C inference pipeline.
+> **Version 1.0.0 — release preparation**
+> The source code and development workflow are in the repository. A genuinely easy-to-install release still needs tested, downloadable desktop builds and a bundled model file; see [the release checklist](#what-is-needed-for-an-easy-download).
 
-## Project at a glance
+<!--
+SHOWCASE MEDIA — add these files when ready:
+1. Record a short 10–20 second GIF showing: draw a digit -> prediction appears.
+   Save as assets/demo.gif, then uncomment the line below.
+2. Add a clean screenshot of the running app as assets/screenshot.png, then uncomment the line below.
+![Number Guesser demo](assets/demo.gif)
+![Number Guesser desktop app](assets/screenshot.png)
+-->
+
+## See it in action
+
+**Demo video / GIF:** *Reserved for a short recording of drawing a digit and seeing the prediction.*
+
+**Application screenshot:** *Reserved for a clear screenshot of the running desktop app.*
+
+These are intentional placeholders so the README can be completed with real captures of the actual program—not mockups.
+
+## What it does
+
+- Trains a convolutional neural network (CNN) on the MNIST handwritten-digit dataset using PyTorch.
+- Exports trained weights to a compact binary file.
+- Runs the model's forward pass in native C.
+- Provides a Raylib desktop UI where you can draw a digit and get a prediction.
+- Includes a numerical parity test that compares selected intermediate values from the Python and C implementations.
+
+### How the pieces fit together
 
 ```text
-MNIST data
-   │
-   ▼
-PyTorch training ──► checkpoint (.pth)
-                           │
-                           ▼
-                     weight exporter
-                           │
-                           ▼
-                    binary weights (.bin)
-                           │
-                           ▼
-                 native C inference engine
-                           ▲
-                           │
-                 Raylib drawing application
+MNIST dataset
+    |
+    v
+PyTorch model (Python) ---> checkpoint (.pth)
+                                  |
+                                  v
+                           weight exporter
+                                  |
+                                  v
+                           weights.bin
+                                  |
+                                  v
+Draw a digit ---> Raylib UI ---> native C CNN ---> predicted digit
+                                  ^
+                                  |
+                         C unit tests / parity checks
 ```
 
-Python is responsible for training, evaluation, and exporting. C is responsible for running inference in the desktop application. The Python/C parity benchmark compares intermediate numerical results so that the two implementations can be checked against each other.
+Python handles training, evaluation, and exporting. C handles inference in the desktop app.
 
-## Repository layout
+## Getting started
 
-| Path | Purpose |
-|---|---|
-| `python/` | Dataset loading, training, evaluation, model definition, weight export, and handwritten-digit collection |
-| `c/include/`, `c/src/` | C inference API, CNN operations, model loading, preprocessing, and Raylib UI |
-| `benchmark/` | Python reference outputs and C outputs used by the numerical parity benchmark |
-| `tests/` | C unit tests and Python/C parity test driver |
-| `models/` | Generated model checkpoints and exported weights; these artifacts are not committed by default |
-| `main.py` | Interactive project menu |
-| `Makefile` | Short commands for common development tasks |
-| `CMakeLists.txt` | CMake build configuration for the desktop app |
-| `fullguide.md` | Detailed code-first project guide |
-| `workflow-guide.md` | Explanation of the menu and Makefile workflow |
-| `foundations-reference.md` | Reference material for existing implementations |
-| `docs/` | Architecture, setup, testing, and model/data documentation |
+### The easiest option
 
-## Quick start
+When downloadable desktop builds are published, you should be able to download the archive for your operating system, extract it, and run the application without installing Python, PyTorch, CMake, or a C compiler.
 
-The desktop GUI requires Python dependencies, a C compiler, CMake, and a Raylib package that CMake can find. The exact Raylib installation steps depend on your platform and toolchain.
+**Those ready-to-run Windows/Linux packages are not attached yet.** Until then, use the source setup below. I don't want to label a source-code checkout as a one-click release.
 
-### 1. Create a Python environment
+### Run from source
+
+You'll need:
+- Python 3.10–3.12 recommended (the CI workflow currently uses Python 3.12).
+- Git, CMake, and a working C compiler.
+- Raylib installed and discoverable by CMake to build the desktop GUI.
+- A supported PyTorch installation. If installing PyTorch fails, choose the matching command at [pytorch.org](https://pytorch.org/get-started/locally/).
+
+#### 1. Download the project
+
+```bash
+git clone https://github.com/sahandkhodayi/Number-Guesser.git
+cd Number-Guesser
+```
+
+Or use GitHub's **Code → Download ZIP** option.
+
+#### 2. Create an environment and install Python packages
 
 Windows PowerShell:
 
 ```powershell
-py -m venv .venv
+py -3.12 -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
@@ -68,60 +99,91 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-If the PyTorch installation command fails, use the installation selector at [pytorch.org](https://pytorch.org/get-started/locally/) for your operating system and hardware, then install the remaining dependencies. The desktop app additionally needs Raylib configured for CMake.
+#### 3. Create the model files
 
-### 2. Inspect available commands
+A fresh checkout does not include generated model weights. Train the model and export the weights used by the C app:
+
+```bash
+python python/train.py
+python python/export.py
+```
+
+Training downloads/uses the MNIST dataset and may take a while depending on your hardware. You only need to train again if you want to create a new checkpoint; the export step must be repeated after retraining.
+
+#### 4. Build and launch the desktop app
+
+Make sure Raylib is installed and CMake can find it, then run:
+
+```bash
+cmake -S . -B build -DBUILD_GUI=ON
+cmake --build build --config Release
+```
+
+Launch the generated `number_guesser` executable from the `build` directory (on Windows it will normally be under `build/Release`). Running it with `build` as the working directory is important because the app currently loads `../models/weights.bin` relative to its working directory.
+
+The repository's `main.py` menu can also run common tasks:
 
 ```bash
 python main.py
 ```
 
-On Windows, GNU Make is not included by default. Use a Make installation, WSL, or invoke the corresponding Python/CMake commands directly.
+## Useful development commands
 
-Common commands from the repository root:
-
-| Command | Purpose |
+| Command | What it does |
 |---|---|
-| `make help` | List Makefile targets |
-| `make menu` | Open the interactive menu |
-| `make train` | Train and save a PyTorch checkpoint |
-| `make evaluate` | Evaluate the saved checkpoint without training |
-| `make export` | Export the checkpoint for C inference |
-| `make build` | Configure and build the Raylib app |
-| `make run` | Build the app and open the menu (choose option 1 to launch the GUI) |
-| `make test` | Run the configured parity and C unit tests |
+| `make train` | Train the PyTorch model |
+| `make evaluate` | Evaluate the saved checkpoint |
+| `make export` | Export weights for C inference |
+| `make build` | Build the desktop app (requires Raylib) |
+| `make run` | Build and open the project menu |
+| `make test` | Run C unit tests and Python/C parity checks |
 | `make clean` | Remove generated build artifacts |
 
-**Platform status:** the headless C unit tests and parity benchmark now use CMake to select the active compiler and executable format. The desktop GUI still requires Raylib configured for the chosen compiler, and Windows/Linux execution must be verified on those platforms before claiming full support. See [Development setup](docs/DEVELOPMENT.md) and [Testing](docs/TESTING.md).
+On Windows, GNU Make may not be installed by default. You can use WSL, install Make, or run the Python/CMake commands directly.
 
-## Correct model workflow
+## Testing and engineering
 
-1. Train when you intentionally want to update the checkpoint: `make train`.
-2. Evaluate the saved checkpoint: `make evaluate`.
-3. Export the checkpoint to the binary format consumed by C: `make export`.
-4. Build and run the desktop application: `make run`.
+The repository includes C unit tests, a Python/C numerical parity test, and a GitHub Actions workflow. These checks cover the configured tests—not every possible image, all memory-safety issues, or successful GUI launch on every desktop.
 
-Training and export are separate operations. After retraining, export again before expecting the C application to use the new weights. Evaluation should not train or update the checkpoint.
+- [Architecture](docs/ARCHITECTURE.md)
+- [Development setup](docs/DEVELOPMENT.md)
+- [Testing](docs/TESTING.md)
+- [Model and data](docs/MODEL_AND_DATA.md)
+- [Docker and CI](docs/DOCKER_AND_CI.md)
+- [Full project guide](fullguide.md)
+- [Workflow guide](workflow-guide.md)
 
-Generated files such as datasets, checkpoints, exported weights, and benchmark binaries are ignored by Git. A fresh clone therefore does not necessarily contain a trained model; train and export one before launching the GUI.
+## What is needed for an easy download?
 
-## Documentation
+Before calling this a polished v1.0.0 desktop release, the release should include:
 
-- [Architecture](docs/ARCHITECTURE.md) — components and data flow.
-- [Development setup](docs/DEVELOPMENT.md) — environments, tools, commands, and current platform caveats.
-- [Testing](docs/TESTING.md) — what the existing tests check and what still needs coverage.
-- [Model and data](docs/MODEL_AND_DATA.md) — tensor shapes, preprocessing, checkpoint/export contract, and artifact lifecycle.
-- [Docker and CI](docs/DOCKER_AND_CI.md) — headless container use and automated workflow coverage.
-- [Full project guide](fullguide.md) — deeper explanations, implementation work, and future improvements.
-- [Workflow guide](workflow-guide.md) — menu and Makefile design.
-- [Foundations reference](foundations-reference.md) — reminders for code that is already implemented.
+- [ ] A short real demo GIF and a screenshot.
+- [ ] A tested Windows build archive with the executable, required runtime files, and `models/weights.bin`.
+- [ ] A tested Linux build archive, or a clearly stated list of supported Linux distributions.
+- [ ] A simple first-run test on a clean machine that does not have the development environment installed.
+- [ ] A release page with clear download names and short run instructions.
+- [ ] Passing CI checks, plus a manual GUI smoke test on each platform advertised.
 
-## Current status and limitations
+Until those are done, the source project is usable for developers, but the end-user install experience is not yet one-click.
 
-The core CNN, C inference engine, drawing UI, preprocessing, model export, C unit tests, and Python/C numerical benchmark exist. CMake now exposes headless test targets, the parity test uses CMake to build its executable, and a GitHub Actions workflow has been added. The workflow and native GUI builds still need to pass on the actual runners before cross-platform support is considered verified.
+## Why Docker is here
 
-The current parity test checks intermediate tensors for its configured input and tolerance. Passing it is evidence of agreement for those tested stages and inputs; it is not proof of general correctness, memory safety, or equivalent accuracy on all handwritten digits.
+Docker is currently for **developers and CI**, not for someone who just wants to draw a digit. It gives the headless C tests a consistent environment and is useful for debugging/build automation. The Raylib drawing window is graphical, so the current Docker image does not package or launch the desktop UI.
 
-## Engineering principle
+**For an ordinary user, Docker should not be required.** The right end-user experience is a downloadable app bundle with the trained weights included. Docker can remain an optional developer/testing tool.
 
-Do not claim a component is correct merely because it runs. Measure it, test it, and document the conditions under which the result was verified.
+## Project structure
+
+| Path | Purpose |
+|---|---|
+| `python/` | Model, training, evaluation, data helpers, and weight export |
+| `c/include/`, `c/src/` | C inference engine and Raylib desktop UI |
+| `tests/` | C unit tests and Python/C parity test |
+| `benchmark/` | Numerical comparison inputs and outputs |
+| `models/` | Generated checkpoints and exported weights |
+| `main.py` | Interactive project menu |
+| `CMakeLists.txt`, `Makefile` | Build and development commands |
+
+---
+
+Built as a learning project exploring neural networks, computer vision, C, and the path from a trained model to a native application.
