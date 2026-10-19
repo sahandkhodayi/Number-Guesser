@@ -87,9 +87,16 @@ static void run_prediction(AppState *app, const CnnModel *model) {
 
 int main(void) {
     CnnModel model;
-    int model_ok = (model_load(&model, "../models/weights.bin") == 0);
+    /* Support both the repository's build layout and a packaged release.
+       Run from the repository root or the folder containing the packaged app. */
+    int model_ok = (model_load(&model, "models/weights.bin") == 0);
     if (!model_ok) {
-        fprintf(stderr, "Warning: could not load models/weights.bin\n");
+        model_ok = (model_load(&model, "../models/weights.bin") == 0);
+    }
+    if (!model_ok) {
+        fprintf(stderr,
+                "Warning: could not load model weights. Expected models/weights.bin "
+                "or ../models/weights.bin relative to the working directory.\n");
     }
 
     InitWindow(WINDOW_W, WINDOW_H, "Number Guesser Pro");
