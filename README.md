@@ -6,9 +6,6 @@ A desktop handwritten-digit recognition app built with **PyTorch, C, and Raylib*
 
 ## Demo
 
-<!-- TODO: Add assets/demo.gif (recommended: 800 px wide, short, optimized).
-     Record the real app: draw a digit -> click predict -> show the result.
-     If you also keep a higher-quality video, save it as assets/demo.mp4 and link it below. -->
 
 <p align="center">
   <img src="assets/demo.gif" alt="Demo placeholder: draw a handwritten digit and see the prediction" width="800">
@@ -18,9 +15,7 @@ A desktop handwritten-digit recognition app built with **PyTorch, C, and Raylib*
   <em>Demo to add: draw a digit, submit it, and show the model's prediction.</em>
 </p>
 
-<!-- Optional full video link once assets/demo.mp4 exists:
-[Watch the full demo video](assets/demo.mp4)
--->
+
 
 ## What the demo shows
 
@@ -28,9 +23,7 @@ The user draws a handwritten digit in the app, asks the model to predict it, and
 
 ## Screenshot
 
-<!-- TODO: Add assets/screenshot.png, a clear screenshot of the real app.
-     Include the drawing canvas, the digit you drew, and the prediction/result area.
-     Replace this placeholder with the real screenshot after adding the file. -->
+
 
 <p align="center">
   <img src="assets/screenshot.png" alt="Screenshot placeholder: Number Guesser desktop application" width="800">
